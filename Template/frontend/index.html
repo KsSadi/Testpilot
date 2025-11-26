@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduNewsRank | Jahangirnagar University</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome (free) for decorative icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#0f766e',
+                            dark: '#134e4a'
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'scale-in': 'scaleIn 0.3s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        },
+                        scaleIn: {
+                            '0%': { transform: 'scale(0.95)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .sr-only {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border-width: 0;
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.8);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+            .glass-dark {
+                background: rgba(15, 23, 42, 0.8);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+            .gradient-mesh {
+                background: 
+                    radial-gradient(at 0% 0%, rgba(20, 184, 166, 0.15) 0px, transparent 50%),
+                    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.1) 0px, transparent 50%),
+                    radial-gradient(at 0% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+            }
+            .nav-link {
+                position: relative;
+            }
+            .nav-link::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%) scaleX(0);
+                width: 80%;
+                height: 2px;
+                background: linear-gradient(to right, #0d9488, #06b6d4);
+                border-radius: 2px;
+                transition: transform 0.3s ease;
+            }
+            .nav-link:hover::after {
+                transform: translateX(-50%) scaleX(1);
+            }
+        }
+        /* Floating icon animations for hero decorations */
+        @keyframes floatY {
+            0% { transform: translateY(0) translateX(0); }
+            25% { transform: translateY(-10px) translateX(4px); }
+            50% { transform: translateY(0) translateX(0); }
+            75% { transform: translateY(8px) translateX(-3px); }
+            100% { transform: translateY(0) translateX(0); }
+        }
+        .float-icon {
+            animation: floatY 6s ease-in-out infinite;
+            will-change: transform;
+            pointer-events: none;
+            opacity: 0.45; /* more subtle */
+            transform-origin: center;
+            filter: drop-shadow(0 6px 14px rgba(2,6,23,0.06));
+        }
+        .float-fast { animation-duration: 4.2s; }
+        .float-slow { animation-duration: 8.5s; }
+        .float-subtle { opacity: 0.28; }
+    /* edu-background: floating shapes + Font Awesome icons */
+    .edu-background { position: absolute; inset: 0; pointer-events: none; }
+    .edu-background .floating-shapes { position: absolute; border-radius: 9999px; filter: blur(48px); opacity: 0.12; transform: translateZ(0); }
+    .edu-background .shape-1 { width: 240px; height: 240px; left: 3%; top: 18%; background: linear-gradient(135deg, rgba(6,182,212,0.12), rgba(20,184,166,0.08)); }
+    .edu-background .shape-2 { width: 320px; height: 320px; right: 6%; bottom: 18%; background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.06)); }
+    .edu-background .shape-3 { width: 180px; height: 180px; left: 40%; top: 6%; background: radial-gradient(circle at 30% 30%, rgba(99,102,241,0.08), transparent 40%); }
+    .edu-background .shape-4 { width: 120px; height: 120px; right: 28%; bottom: 10%; background: radial-gradient(circle at 70% 70%, rgba(20,184,166,0.06), transparent 40%); }
+    .floating-icons { position: absolute; will-change: transform, opacity; opacity: 0.42; filter: drop-shadow(0 8px 20px rgba(2,6,23,0.06)); animation: floatY 6s ease-in-out infinite; }
+    .floating-icons.float-fast { animation-duration: 4s; }
+    .floating-icons.float-slow { animation-duration: 8s; }
+    .floating-icons.sm { font-size: 1rem; }
+    .floating-icons.lg { font-size: 2.25rem; }
+        @media print {
+            body { color: black !important; background: white !important; }
+            table { border: 1px solid #000; }
+            th, td { border: 1px solid #000; padding: 8px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-teal-50/30 to-cyan-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass dark:glass-dark border-b border-white/20 dark:border-slate-700/50 shadow-xl shadow-teal-500/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20 py-3">
+                <!-- Left Logo -->
+                <div class="flex items-center group">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a9/Jahangirnagar_University_Logo.svg" alt="Jahangirnagar University" class="h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div style="display:none;" class="h-14 w-14 bg-gradient-to-br from-teal-600 to-teal-700 dark:from-teal-500 dark:to-teal-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-teal-500/30 transition-transform duration-300 group-hover:scale-105">JU</div>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center space-x-1" aria-label="Main navigation">
+                    <a href="#dashboard" class="px-4 py-2 rounded-xl text-sm font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 transition-all duration-200 hover:bg-teal-100 dark:hover:bg-teal-900/50">
+                        Dashboard
+                    </a>
+                    <a href="#analytics" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                        Analytics
+                    </a>
+                    <a href="#reports" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                        Reports
+                    </a>
+                    <a href="#methodology" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                        Methodology
+                    </a>
+                    <a href="#about" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                        About
+                    </a>
+                </nav>
+
+                <!-- Right Section: Mobile Menu -->
+                <div class="flex items-center gap-3">
+                    <!-- Mobile Menu Button -->
+                    <button id="mobileMenuToggle" aria-label="Toggle mobile menu" class="md:hidden p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all duration-300 shadow-lg">
+                        <svg class="w-6 h-6 text-slate-700 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path id="menuIconOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path id="menuIconClose" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Right Logo (Desktop) -->
+                    <div class="hidden md:flex items-center group">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Information_and_Communication_Technology_Division.svg/1200px-Information_and_Communication_Technology_Division.svg.png" alt="ICT Division, Government of Bangladesh" class="h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div style="display:none;" class="h-14 w-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-cyan-500/30 transition-transform duration-300 group-hover:scale-105">ICT</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden glass dark:glass-dark border-t border-white/20 dark:border-slate-700/50">
+            <nav class="max-w-7xl mx-auto px-4 py-4 space-y-2" aria-label="Mobile navigation">
+                <a href="#dashboard" class="block px-4 py-3 rounded-xl text-sm font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 transition-all duration-200">
+                    Dashboard
+                </a>
+                <a href="#analytics" class="block px-4 py-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                    Analytics
+                </a>
+                <a href="#reports" class="block px-4 py-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                    Reports
+                </a>
+                <a href="#methodology" class="block px-4 py-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                    Methodology
+                </a>
+                <a href="#about" class="block px-4 py-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all duration-200">
+                    About
+                </a>
+                <!-- ICT Logo in Mobile Menu -->
+                <div class="pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center justify-center group">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Information_and_Communication_Technology_Division.svg/1200px-Information_and_Communication_Technology_Division.svg.png" alt="ICT Division, Government of Bangladesh" class="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div style="display:none;" class="h-12 w-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-cyan-500/30 transition-transform duration-300 group-hover:scale-105">ICT</div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section class="relative py-16 md:py-24 overflow-hidden">
+            <!-- Gradient Background -->
+            <div class="absolute inset-0 gradient-mesh"></div>
+            
+            <!-- Decorative Elements -->
+            <div class="absolute top-20 left-10 w-72 h-72 bg-teal-400/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl"></div>
+            <!-- edu-background: floating shapes + Font Awesome icons -->
+            <div class="edu-background" aria-hidden="true">
+                <!-- Floating shapes (blurred gradients) -->
+                <div class="floating-shapes shape-1"></div>
+                <div class="floating-shapes shape-2"></div>
+                <div class="floating-shapes shape-3"></div>
+                <div class="floating-shapes shape-4"></div>
+
+                <!-- Floating icons (Font Awesome) -->
+                <i class="fas fa-book floating-icons float-slow absolute left-6 top-28 text-teal-300 text-2xl md:text-4xl pointer-events-none"></i>
+                <i class="fas fa-graduation-cap floating-icons float-fast absolute right-12 top-24 text-amber-300 text-2xl md:text-4xl pointer-events-none"></i>
+                <i class="fas fa-magnifying-glass-chart floating-icons float-fast absolute right-6 top-40 text-amber-300 text-2xl md:text-4xl pointer-events-none"></i>
+                <i class="fas fa-rocket floating-icons float-fast absolute left-1/2 top-8 md:left-1/3 md:top-14 -translate-x-1/2 text-sky-300 text-3xl md:text-5xl pointer-events-none"></i>
+                <i class="fas fa-flask floating-icons float-slow absolute right-28 bottom-28 md:right-32 md:bottom-32 text-cyan-300 text-2xl md:text-4xl pointer-events-none"></i>
+                <i class="fas fa-microscope floating-icons float-slow absolute left-28 bottom-20 text-cyan-300 text-2xl md:text-4xl pointer-events-none"></i>
+            </div>
+            
+            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16 animate-slide-up">
+                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 dark:from-teal-400 dark:via-cyan-400 dark:to-blue-400 bg-clip-text text-transparent leading-tight">
+                        EduNewsRank
+                    </h1>
+                    <p class="text-xl md:text-2xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto leading-relaxed">
+                        Forensic verification, credibility ranking, and analytics for education-related news
+                    </p>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <!-- KPI Cards (compact) -->
+                        <div class="group relative bg-white/90 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-md hover:shadow-lg p-5 border border-white/20 dark:border-slate-700/50 transition-all duration-200 hover:scale-102 hover:-translate-y-0.5 animate-scale-in overflow-hidden">
+                            <!-- accent bar -->
+                            <div class="absolute left-0 top-2 bottom-2 w-1 rounded-l-3xl bg-gradient-to-b from-teal-400 to-teal-600"></div>
+                            <div class="relative pl-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Total Articles</div>
+                                    <div class="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center shadow-sm text-white text-sm">
+                                        <i class="fas fa-file-alt"></i>
+                                    </div>
+                                </div>
+                                <div class="flex items-end gap-3">
+                                    <div class="text-3xl md:text-4xl font-bold text-teal-700 dark:text-teal-400" id="totalArticles">0</div>
+                                    <div class="text-xs text-slate-400">last 12 months</div>
+                                </div>
+                                <div class="mt-2">
+                                    <svg viewBox="0 0 100 12" class="w-full h-5 text-teal-200" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="0,8 16,6 32,7 48,4 64,7 80,5 100,6" class="stroke-current"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="group relative bg-white/90 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-md hover:shadow-lg p-5 border border-white/20 dark:border-slate-700/50 transition-all duration-200 hover:scale-102 hover:-translate-y-0.5 animate-scale-in overflow-hidden" style="animation-delay: 0.05s;">
+                            <div class="absolute left-0 top-2 bottom-2 w-1 rounded-l-3xl bg-gradient-to-b from-cyan-400 to-blue-600"></div>
+                            <div class="relative pl-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Unique Journalists</div>
+                                    <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-lg flex items-center justify-center shadow-sm text-white text-sm">
+                                        <i class="fas fa-pen"></i>
+                                    </div>
+                                </div>
+                                <div class="flex items-end gap-3">
+                                    <div class="text-3xl md:text-4xl font-bold text-cyan-700 dark:text-cyan-400" id="totalJournalists">0</div>
+                                    <div class="text-xs text-slate-400">last 12 months</div>
+                                </div>
+                                <div class="mt-2">
+                                    <svg viewBox="0 0 100 12" class="w-full h-5 text-cyan-200" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="0,7 18,5 36,8 54,6 72,8 90,5 100,6" class="stroke-current"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="group relative bg-white/90 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-md hover:shadow-lg p-5 border border-white/20 dark:border-slate-700/50 transition-all duration-200 hover:scale-102 hover:-translate-y-0.5 animate-scale-in overflow-hidden" style="animation-delay: 0.1s;">
+                            <div class="absolute left-0 top-2 bottom-2 w-1 rounded-l-3xl bg-gradient-to-b from-emerald-400 to-teal-600"></div>
+                            <div class="relative pl-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Avg Credibility</div>
+                                    <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-lg flex items-center justify-center shadow-sm text-white text-sm">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                </div>
+                                <div class="flex items-end gap-3">
+                                    <div class="text-3xl md:text-4xl font-bold text-emerald-700 dark:text-emerald-400" id="avgCredibility">0</div>
+                                    <div class="text-xs text-slate-400">last 12 months</div>
+                                </div>
+                                <div class="mt-2">
+                                    <svg viewBox="0 0 100 12" class="w-full h-5 text-emerald-200" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="0,8 20,6 40,8 60,5 80,9 100,6" class="stroke-current"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabs Section -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Tab Navigation -->
+            <nav role="tablist" aria-label="Content tabs" class="flex justify-center mb-12">
+                <div class="inline-flex p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-slate-700/50">
+                    <button role="tab" aria-selected="true" aria-controls="byPaperPanel" id="byPaperTab" 
+                            class="relative px-8 py-4 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900
+                                   bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg shadow-teal-500/30">
+                        <span class="relative z-10">By Paper</span>
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="byJournalistPanel" id="byJournalistTab" 
+                            class="relative px-8 py-4 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900
+                                   text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/50 dark:hover:bg-slate-700/50">
+                        <span class="relative z-10">By Journalist</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Tab Panel: By Paper -->
+            <div role="tabpanel" id="byPaperPanel" aria-labelledby="byPaperTab" class="space-y-6">
+                <!-- Controls -->
+                <div class="flex flex-col md:flex-row gap-4 mb-8">
+                    <div class="flex-1 relative group">
+                        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                            <svg class="w-5 h-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text" id="searchArticles" placeholder="Search title, newspaper, tags..." 
+                               class="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl
+                                      focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 shadow-lg hover:shadow-xl
+                                      placeholder:text-slate-400">
+                    </div>
+                    <div class="flex gap-3">
+                        <select id="filterLanguage" class="px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl
+                                                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 shadow-lg hover:shadow-xl font-medium cursor-pointer">
+                            <option value="">All Languages</option>
+                            <option value="English">English</option>
+                            <option value="Bangla">Bangla</option>
+                        </select>
+                        <select id="filterSection" class="px-6 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl
+                                                          focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 shadow-lg hover:shadow-xl font-medium cursor-pointer">
+                            <option value="">All Sections</option>
+                            <option value="Country">Country</option>
+                            <option value="Campus">Campus</option>
+                            <option value="Politics">Politics</option>
+                            <option value="Education">Education</option>
+                            <option value="City">City</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Articles Table -->
+                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-slate-700/50">
+                    <div class="overflow-x-auto">
+                        <table class="w-full hidden md:table">
+                            <caption class="sr-only">Articles by newspaper</caption>
+                            <thead class="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 sticky top-0 z-10">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="newspaper_name" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Newspaper 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="title" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Title 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="section" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Section 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="language" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Language 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="published_at" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Published 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                        Tags
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="sentiment" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Sentiment 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="credibility" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Credibility 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="articlesTableBody" class="divide-y divide-slate-200 dark:divide-slate-700/50">
+                                <!-- Content populated by JS -->
+                            </tbody>
+                        </table>
+
+                        <!-- Mobile Card View -->
+                        <div id="articlesCardsBody" class="md:hidden divide-y divide-slate-200 dark:divide-slate-700">
+                            <!-- Content populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="articlesPagination" class="px-6 py-5 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border-t border-slate-200 dark:border-slate-600/50">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="articlesEmpty" class="hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl p-16 text-center border border-white/20 dark:border-slate-700/50">
+                    <div class="text-6xl mb-6">📰</div>
+                    <h3 class="text-2xl font-bold text-slate-700 dark:text-slate-300 mb-3">No articles found</h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-lg">Try adjusting your search or filters</p>
+                </div>
+            </div>
+
+            <!-- Tab Panel: By Journalist -->
+            <div role="tabpanel" id="byJournalistPanel" aria-labelledby="byJournalistTab" class="hidden space-y-6">
+                <!-- Controls -->
+                <div class="flex flex-col md:flex-row gap-4 mb-8">
+                    <div class="flex-1 relative group">
+                        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                            <svg class="w-5 h-5 text-slate-400 group-focus-within:text-teal-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text" id="searchJournalists" placeholder="Search journalist, newspaper, topics..." 
+                               class="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl
+                                      focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 shadow-lg hover:shadow-xl
+                                      placeholder:text-slate-400">
+                    </div>
+                </div>
+
+                <!-- Journalists Table -->
+                <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-slate-700/50">
+                    <div class="overflow-x-auto">
+                        <table class="w-full hidden md:table">
+                            <caption class="sr-only">Articles by journalist</caption>
+                            <thead class="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 sticky top-0 z-10">
+                                <tr>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="journalist" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Journalist 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="newspaper" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Newspaper 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="articles" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Articles 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="avg_credibility" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Avg Credibility 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors group" 
+                                        data-sort="last_published_at" aria-sort="none">
+                                        <span class="flex items-center gap-2">
+                                            Last Published 
+                                            <span class="sort-indicator text-teal-600 dark:text-teal-400"></span>
+                                        </span>
+                                    </th>
+                                    <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                        Top Topics
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="journalistsTableBody" class="divide-y divide-slate-200 dark:divide-slate-700/50">
+                                <!-- Content populated by JS -->
+                            </tbody>
+                        </table>
+
+                        <!-- Mobile Card View -->
+                        <div id="journalistsCardsBody" class="md:hidden divide-y divide-slate-200 dark:divide-slate-700/50">
+                            <!-- Content populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="journalistsPagination" class="px-6 py-5 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border-t border-slate-200 dark:border-slate-600/50">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="journalistsEmpty" class="hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl p-16 text-center border border-white/20 dark:border-slate-700/50">
+                    <div class="text-6xl mb-6">✍️</div>
+                    <h3 class="text-2xl font-bold text-slate-700 dark:text-slate-300 mb-3">No journalists found</h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-lg">Try adjusting your search</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass dark:glass-dark border-t border-slate-200 dark:border-slate-700/50 mt-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col items-center gap-6">
+                <!-- Logos -->
+                <div class="flex items-center justify-center gap-6">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/a/a9/Jahangirnagar_University_Logo.svg" 
+                         alt="Jahangirnagar University" 
+                         class="h-12 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity" />
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Information_and_Communication_Technology_Division.svg/1200px-Information_and_Communication_Technology_Division.svg.png" 
+                         alt="ICT Division, Government of Bangladesh" 
+                         class="h-10 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity" />
+                </div>
+                
+                <!-- Text Content -->
+                <div class="text-center">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">© 2025 EduNewsRank — Jahangirnagar University • In collaboration with ICT Division</p>
+                    <a href="https://prathomik.com" target="_blank" class="inline-block mt-2 text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors">
+                        Crafted with ❤️ by Prathomik
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Dark Mode Toggle (Bottom Right) -->
+    <div class="fixed bottom-6 right-6 z-50 no-print">
+        <button id="darkModeToggle" aria-label="Toggle dark mode" class="p-3 rounded-full bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl hover:scale-110 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all duration-300 group border border-teal-500/20">
+            <svg class="w-5 h-5 hidden dark:block text-teal-400 group-hover:rotate-180 transition-transform duration-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path>
+            </svg>
+            <svg class="w-5 h-5 dark:hidden text-slate-700 group-hover:rotate-12 transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <script>
+        // Sample Data
+        const articles = [
+            {
+                newspaper_name: "The Daily Star",
+                title: "BUET students demand justice for ragging victim",
+                language: "English",
+                section: "Campus",
+                published_at: "2025-08-27T18:03:00Z",
+                article_link: "https://example.com/article1",
+                tags: ["BUET", "Ragging", "Justice"],
+                sentiment: "Negative",
+                credibility: 85
+            },
+            {
+                newspaper_name: "Prothom Alo (Bangla)",
+                title: "বুয়েটে নতুন গবেষণা কেন্দ্র উদ্বোধন",
+                language: "Bangla",
+                section: "Education",
+                published_at: "2025-08-26T14:30:00Z",
+                article_link: "https://example.com/article2",
+                tags: ["BUET", "Research", "Innovation"],
+                sentiment: "Positive",
+                credibility: 78
+            },
+            {
+                newspaper_name: "New Age (English)",
+                title: "Engineering students protest against transport fare hike",
+                language: "English",
+                section: "Country",
+                published_at: "2025-08-25T10:15:00Z",
+                article_link: "https://example.com/article3",
+                tags: ["BUET", "Dhaka", "Protest"],
+                sentiment: "Negative",
+                credibility: 68
+            },
+            {
+                newspaper_name: "The Daily Star",
+                title: "BUET ranks among top engineering universities in Asia",
+                language: "English",
+                section: "Education",
+                published_at: "2025-08-24T09:00:00Z",
+                article_link: "https://example.com/article4",
+                tags: ["BUET", "Ranking", "Achievement"],
+                sentiment: "Positive",
+                credibility: 92
+            },
+            {
+                newspaper_name: "Bdnews24.com",
+                title: "Road safety: BUET students continue movement",
+                language: "English",
+                section: "City",
+                published_at: "2025-08-23T16:45:00Z",
+                article_link: "https://example.com/article5",
+                tags: ["BUET", "Road Safety", "Movement"],
+                sentiment: "Neutral",
+                credibility: 75
+            },
+            {
+                newspaper_name: "Prothom Alo (Bangla)",
+                title: "বুয়েট শিক্ষার্থীদের উদ্ভাবিত রোবট জাতীয় পুরস্কার পেল",
+                language: "Bangla",
+                section: "Campus",
+                published_at: "2025-08-22T11:20:00Z",
+                article_link: "https://example.com/article6",
+                tags: ["BUET", "Robotics", "Award"],
+                sentiment: "Positive",
+                credibility: 88
+            },
+            {
+                newspaper_name: "The Independent",
+                title: "BUET alumni contribute to national tech ecosystem",
+                language: "English",
+                section: "Country",
+                published_at: "2025-08-21T13:30:00Z",
+                article_link: "https://example.com/article7",
+                tags: ["BUET", "Alumni", "Technology"],
+                sentiment: "Positive",
+                credibility: 82
+            },
+            {
+                newspaper_name: "New Age (English)",
+                title: "Students clash with police over campus security issues",
+                language: "English",
+                section: "Campus",
+                published_at: "2025-08-20T19:00:00Z",
+                article_link: "https://example.com/article8",
+                tags: ["BUET", "Security", "Dhaka"],
+                sentiment: "Negative",
+                credibility: 71
+            },
+            {
+                newspaper_name: "Bdnews24.com",
+                title: "BUET launches AI research initiative with global partners",
+                language: "English",
+                section: "Education",
+                published_at: "2025-08-19T08:45:00Z",
+                article_link: "https://example.com/article9",
+                tags: ["BUET", "AI", "Research"],
+                sentiment: "Positive",
+                credibility: 90
+            },
+            {
+                newspaper_name: "The Daily Star",
+                title: "Engineering graduates face job market challenges",
+                language: "English",
+                section: "Country",
+                published_at: "2025-08-18T15:10:00Z",
+                article_link: "https://example.com/article10",
+                tags: ["BUET", "Employment", "Economy"],
+                sentiment: "Neutral",
+                credibility: 76
+            },
+            {
+                newspaper_name: "Prothom Alo (Bangla)",
+                title: "বুয়েটের ছাত্রলীগ-ছাত্রদল সংঘর্ষ",
+                language: "Bangla",
+                section: "Politics",
+                published_at: "2025-08-17T17:25:00Z",
+                article_link: "https://example.com/article11",
+                tags: ["BUET", "Politics", "Campus"],
+                sentiment: "Negative",
+                credibility: 65
+            },
+            {
+                newspaper_name: "The Independent",
+                title: "BUET hosts international engineering conference",
+                language: "English",
+                section: "Campus",
+                published_at: "2025-08-16T10:00:00Z",
+                article_link: "https://example.com/article12",
+                tags: ["BUET", "Conference", "International"],
+                sentiment: "Positive",
+                credibility: 84
+            },
+            {
+                newspaper_name: "Bdnews24.com",
+                title: "Students demand better laboratory facilities at BUET",
+                language: "English",
+                section: "Education",
+                published_at: "2025-08-15T12:30:00Z",
+                article_link: "https://example.com/article13",
+                tags: ["BUET", "Infrastructure", "Demand"],
+                sentiment: "Neutral",
+                credibility: 73
+            },
+            {
+                newspaper_name: "New Age (English)",
+                title: "BUET researchers develop low-cost water purification system",
+                language: "English",
+                section: "Country",
+                published_at: "2025-08-14T14:15:00Z",
+                article_link: "https://example.com/article14",
+                tags: ["BUET", "Innovation", "Water"],
+                sentiment: "Positive",
+                credibility: 87
+            },
+            {
+                newspaper_name: "The Daily Star",
+                title: "Academic calendar disrupted by student unrest at BUET",
+                language: "English",
+                section: "Campus",
+                published_at: "2025-08-13T16:50:00Z",
+                article_link: "https://example.com/article15",
+                tags: ["BUET", "Academic", "Unrest"],
+                sentiment: "Negative",
+                credibility: 69
+            },
+            {
+                newspaper_name: "Prothom Alo (Bangla)",
+                title: "বুয়েটে নতুন ভর্তি পরীক্ষার নিয়ম",
+                language: "Bangla",
+                section: "Education",
+                published_at: "2025-08-12T09:30:00Z",
+                article_link: "https://example.com/article16",
+                tags: ["BUET", "Admission", "Education"],
+                sentiment: "Neutral",
+                credibility: 80
+            },
+            {
+                newspaper_name: "The Independent",
+                title: "BUET students win international programming competition",
+                language: "English",
+                section: "Campus",
+                published_at: "2025-08-11T11:45:00Z",
+                article_link: "https://example.com/article17",
+                tags: ["BUET", "Programming", "Competition"],
+                sentiment: "Positive",
+                credibility: 91
+            },
+            {
+                newspaper_name: "Bdnews24.com",
+                title: "Concerns raised over mental health support at BUET",
+                language: "English",
+                section: "Education",
+                published_at: "2025-08-10T13:20:00Z",
+                article_link: "https://example.com/article18",
+                tags: ["BUET", "Mental Health", "Students"],
+                sentiment: "Neutral",
+                credibility: 77
+            }
+        ];
+
+        const journalists = [
+            {
+                journalist: "Staff Correspondent",
+                newspaper: "The Daily Star",
+                articles: 24,
+                avg_credibility: 83,
+                last_published_at: "2025-08-27T18:03:00Z",
+                top_tags: ["BUET", "Education", "Campus"]
+            },
+            {
+                journalist: "Ahmed Kamal",
+                newspaper: "Prothom Alo (Bangla)",
+                articles: 18,
+                avg_credibility: 79,
+                last_published_at: "2025-08-26T14:30:00Z",
+                top_tags: ["BUET", "Research", "Innovation"]
+            },
+            {
+                journalist: "Mahmud Hassan",
+                newspaper: "New Age (English)",
+                articles: 15,
+                avg_credibility: 71,
+                last_published_at: "2025-08-25T10:15:00Z",
+                top_tags: ["Protest", "Dhaka", "Students"]
+            },
+            {
+                journalist: "Fatima Rahman",
+                newspaper: "Bdnews24.com",
+                articles: 21,
+                avg_credibility: 81,
+                last_published_at: "2025-08-23T16:45:00Z",
+                top_tags: ["BUET", "Technology", "Society"]
+            },
+            {
+                journalist: "Rashid Ali",
+                newspaper: "The Independent",
+                articles: 12,
+                avg_credibility: 85,
+                last_published_at: "2025-08-21T13:30:00Z",
+                top_tags: ["Education", "Technology", "Innovation"]
+            },
+            {
+                journalist: "Nasrin Akter",
+                newspaper: "Prothom Alo (Bangla)",
+                articles: 19,
+                avg_credibility: 76,
+                last_published_at: "2025-08-22T11:20:00Z",
+                top_tags: ["Campus", "Students", "Awards"]
+            },
+            {
+                journalist: "Tariq Mahmood",
+                newspaper: "The Daily Star",
+                articles: 16,
+                avg_credibility: 88,
+                last_published_at: "2025-08-18T15:10:00Z",
+                top_tags: ["Economy", "Employment", "Youth"]
+            },
+            {
+                journalist: "Sabina Yeasmin",
+                newspaper: "Bdnews24.com",
+                articles: 20,
+                avg_credibility: 82,
+                last_published_at: "2025-08-19T08:45:00Z",
+                top_tags: ["AI", "Research", "Technology"]
+            },
+            {
+                journalist: "Imran Hossain",
+                newspaper: "New Age (English)",
+                articles: 13,
+                avg_credibility: 68,
+                last_published_at: "2025-08-20T19:00:00Z",
+                top_tags: ["Security", "Campus", "Issues"]
+            },
+            {
+                journalist: "Ayesha Siddiqua",
+                newspaper: "The Independent",
+                articles: 17,
+                avg_credibility: 86,
+                last_published_at: "2025-08-16T10:00:00Z",
+                top_tags: ["International", "Conference", "Academia"]
+            },
+            {
+                journalist: "Kamal Uddin",
+                newspaper: "Prothom Alo (Bangla)",
+                articles: 14,
+                avg_credibility: 73,
+                last_published_at: "2025-08-17T17:25:00Z",
+                top_tags: ["Politics", "Campus", "Students"]
+            }
+        ];
+
+        // State
+        let state = {
+            activeTab: 'byPaper',
+            articles: {
+                data: articles,
+                filtered: articles,
+                page: 1,
+                sortKey: null,
+                sortDir: 'asc',
+                search: '',
+                filterLanguage: '',
+                filterSection: ''
+            },
+            journalists: {
+                data: journalists,
+                filtered: journalists,
+                page: 1,
+                sortKey: null,
+                sortDir: 'asc',
+                search: ''
+            }
+        };
+
+        const ITEMS_PER_PAGE = 10;
+
+        // Utility Functions
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            const hours = date.getHours();
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            return `${day} ${month} ${year}, ${displayHours}:${minutes} ${ampm}`;
+        }
+
+        function getSentimentBadgeClass(sentiment) {
+            const classes = {
+                'Positive': 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-700 dark:from-emerald-900/40 dark:to-emerald-800/40 dark:text-emerald-300 shadow-lg shadow-emerald-500/20',
+                'Neutral': 'bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 dark:from-slate-700 dark:to-slate-600 dark:text-slate-300 shadow-lg shadow-slate-500/20',
+                'Negative': 'bg-gradient-to-r from-rose-100 to-rose-200 text-rose-700 dark:from-rose-900/40 dark:to-rose-800/40 dark:text-rose-300 shadow-lg shadow-rose-500/20'
+            };
+            return classes[sentiment] || classes['Neutral'];
+        }
+
+        function renderCredibilityBar(value) {
+            return `
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-2.5 shadow-inner">
+                        <div class="bg-gradient-to-r from-teal-500 to-cyan-500 dark:from-teal-400 dark:to-cyan-400 h-2.5 rounded-full transition-all duration-500 shadow-lg" style="width: ${value}%"></div>
+                    </div>
+                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300 min-w-[2.5rem] text-right">${value}</span>
+                </div>
+            `;
+        }
+
+        function renderTags(tags) {
+            return tags.map(tag => 
+                `<span class="inline-block bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-300 rounded-full px-3 py-1 text-xs font-medium shadow-md hover:shadow-lg transition-shadow">${tag}</span>`
+            ).join(' ');
+        }
+
+        // Filter and Search
+        function applyArticleFilters() {
+            const { search, filterLanguage, filterSection } = state.articles;
+            let filtered = state.articles.data;
+
+            if (search) {
+                const searchLower = search.toLowerCase();
+                filtered = filtered.filter(article => 
+                    article.title.toLowerCase().includes(searchLower) ||
+                    article.newspaper_name.toLowerCase().includes(searchLower) ||
+                    article.tags.some(tag => tag.toLowerCase().includes(searchLower))
+                );
+            }
+
+            if (filterLanguage) {
+                filtered = filtered.filter(article => article.language === filterLanguage);
+            }
+
+            if (filterSection) {
+                filtered = filtered.filter(article => article.section === filterSection);
+            }
+
+            state.articles.filtered = filtered;
+            state.articles.page = 1;
+        }
+
+        function applyJournalistFilters() {
+            const { search } = state.journalists;
+            let filtered = state.journalists.data;
+
+            if (search) {
+                const searchLower = search.toLowerCase();
+                filtered = filtered.filter(journalist => 
+                    journalist.journalist.toLowerCase().includes(searchLower) ||
+                    journalist.newspaper.toLowerCase().includes(searchLower) ||
+                    journalist.top_tags.some(tag => tag.toLowerCase().includes(searchLower))
+                );
+            }
+
+            state.journalists.filtered = filtered;
+            state.journalists.page = 1;
+        }
+
+        // Sorting
+        function sortData(data, key, dir) {
+            return [...data].sort((a, b) => {
+                let aVal = a[key];
+                let bVal = b[key];
+
+                if (key === 'published_at' || key === 'last_published_at') {
+                    aVal = new Date(aVal);
+                    bVal = new Date(bVal);
+                }
+
+                if (typeof aVal === 'string') {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+
+                if (dir === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
+        }
+
+        // Render Articles Table
+        function renderArticlesTable() {
+            const { filtered, page, sortKey, sortDir } = state.articles;
+            let data = filtered;
+
+            if (sortKey) {
+                data = sortData(data, sortKey, sortDir);
+            }
+
+            const start = (page - 1) * ITEMS_PER_PAGE;
+            const pageData = data.slice(start, start + ITEMS_PER_PAGE);
+
+            const tableBody = document.getElementById('articlesTableBody');
+            const cardsBody = document.getElementById('articlesCardsBody');
+            const emptyState = document.getElementById('articlesEmpty');
+
+            if (pageData.length === 0) {
+                tableBody.innerHTML = '';
+                cardsBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('articlesPagination').innerHTML = '';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            // Desktop Table View
+            tableBody.innerHTML = pageData.map((article, idx) => `
+                <tr class="group hover:bg-gradient-to-r hover:from-teal-50/50 hover:to-cyan-50/50 dark:hover:from-teal-900/10 dark:hover:to-cyan-900/10 transition-all duration-200 ${idx % 2 === 0 ? 'bg-white dark:bg-slate-800/50' : 'bg-slate-50/30 dark:bg-slate-800/30'}">
+                    <td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">${article.newspaper_name}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <a href="${article.article_link}" target="_blank" rel="noopener noreferrer" 
+                               class="text-teal-700 dark:text-teal-400 hover:text-teal-600 dark:hover:text-teal-300 hover:underline line-clamp-2 font-medium transition-colors flex-1">
+                                ${article.title}
+                            </a>
+                            <a href="news-detail.html?id=${start + idx + 1}" 
+                               class="shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-teal-600 to-cyan-600 text-white text-xs font-semibold hover:shadow-lg transition-all opacity-0 group-hover:opacity-100">
+                                <i class="fas fa-eye mr-1"></i>View
+                            </a>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">${article.section}</td>
+                    <td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">${article.language}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">${formatDate(article.published_at)}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <div class="flex flex-wrap gap-1.5">${renderTags(article.tags)}</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="inline-block px-3 py-1.5 rounded-xl text-xs font-bold ${getSentimentBadgeClass(article.sentiment)}">
+                            ${article.sentiment}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm" style="min-width: 180px;">
+                        ${renderCredibilityBar(article.credibility)}
+                    </td>
+                </tr>
+            `).join('');
+
+            // Mobile Card View
+            cardsBody.innerHTML = pageData.map((article, idx) => `
+                <div class="p-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:bg-gradient-to-r hover:from-teal-50/30 hover:to-cyan-50/30 dark:hover:from-teal-900/10 dark:hover:to-cyan-900/10 transition-all duration-200">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">${article.newspaper_name}</span>
+                        <span class="inline-block px-3 py-1.5 rounded-xl text-xs font-bold ${getSentimentBadgeClass(article.sentiment)}">
+                            ${article.sentiment}
+                        </span>
+                    </div>
+                    <h3 class="font-semibold text-slate-900 dark:text-slate-100 mb-3 leading-snug">
+                        <a href="${article.article_link}" target="_blank" rel="noopener noreferrer" 
+                           class="text-teal-700 dark:text-teal-400 hover:text-teal-600 dark:hover:text-teal-300 hover:underline transition-colors">
+                            ${article.title}
+                        </a>
+                    </h3>
+                    <div class="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 mb-3">
+                        <span class="font-medium">${article.section}</span>
+                        <span>•</span>
+                        <span>${article.language}</span>
+                        <span>•</span>
+                        <span>${formatDate(article.published_at)}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 mb-4">${renderTags(article.tags)}</div>
+                    <div class="mt-3 p-3 bg-slate-50/50 dark:bg-slate-700/30 rounded-xl">
+                        <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wider">Credibility</div>
+                        ${renderCredibilityBar(article.credibility)}
+                    </div>
+                    <div class="mt-4 flex gap-2">
+                        <a href="news-detail.html?id=${start + idx + 1}" 
+                           class="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 text-white text-sm font-semibold hover:shadow-lg transition-all text-center">
+                            <i class="fas fa-chart-line mr-2"></i>View Analysis
+                        </a>
+                        <a href="${article.article_link}" target="_blank" rel="noopener noreferrer"
+                           class="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+
+            renderPagination('articles', data.length);
+            updateSortIndicators('articles');
+        }
+
+        // Render Journalists Table
+        function renderJournalistsTable() {
+            const { filtered, page, sortKey, sortDir } = state.journalists;
+            let data = filtered;
+
+            if (sortKey) {
+                data = sortData(data, sortKey, sortDir);
+            }
+
+            const start = (page - 1) * ITEMS_PER_PAGE;
+            const pageData = data.slice(start, start + ITEMS_PER_PAGE);
+
+            const tableBody = document.getElementById('journalistsTableBody');
+            const cardsBody = document.getElementById('journalistsCardsBody');
+            const emptyState = document.getElementById('journalistsEmpty');
+
+            if (pageData.length === 0) {
+                tableBody.innerHTML = '';
+                cardsBody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                document.getElementById('journalistsPagination').innerHTML = '';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            // Desktop Table View
+            tableBody.innerHTML = pageData.map((journalist, idx) => `
+                <tr class="group hover:bg-gradient-to-r hover:from-teal-50/50 hover:to-cyan-50/50 dark:hover:from-teal-900/10 dark:hover:to-cyan-900/10 transition-all duration-200 ${idx % 2 === 0 ? 'bg-white dark:bg-slate-800/50' : 'bg-slate-50/30 dark:bg-slate-800/30'}">
+                    <td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-100">${journalist.journalist}</td>
+                    <td class="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">${journalist.newspaper}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-slate-700 dark:text-slate-300">${journalist.articles}</td>
+                    <td class="px-6 py-4 text-sm" style="min-width: 180px;">
+                        ${renderCredibilityBar(journalist.avg_credibility)}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">${formatDate(journalist.last_published_at)}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <div class="flex flex-wrap gap-1.5">${renderTags(journalist.top_tags)}</div>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Mobile Card View
+            cardsBody.innerHTML = pageData.map(journalist => `
+                <div class="p-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl hover:bg-gradient-to-r hover:from-teal-50/30 hover:to-cyan-50/30 dark:hover:from-teal-900/10 dark:hover:to-cyan-900/10 transition-all duration-200">
+                    <h3 class="font-bold text-lg text-slate-900 dark:text-slate-100 mb-2">${journalist.journalist}</h3>
+                    <div class="text-sm text-slate-600 dark:text-slate-400 mb-4 font-medium">${journalist.newspaper}</div>
+                    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                        <div class="bg-slate-50/50 dark:bg-slate-700/30 rounded-xl p-3">
+                            <span class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold block mb-1">Articles</span>
+                            <span class="font-bold text-lg text-slate-900 dark:text-slate-100">${journalist.articles}</span>
+                        </div>
+                        <div class="bg-slate-50/50 dark:bg-slate-700/30 rounded-xl p-3">
+                            <span class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold block mb-1">Last Published</span>
+                            <span class="font-medium text-slate-900 dark:text-slate-100 text-xs">${formatDate(journalist.last_published_at)}</span>
+                        </div>
+                    </div>
+                    <div class="mb-4 p-3 bg-slate-50/50 dark:bg-slate-700/30 rounded-xl">
+                        <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-wider">Avg Credibility</div>
+                        ${renderCredibilityBar(journalist.avg_credibility)}
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">${renderTags(journalist.top_tags)}</div>
+                </div>
+            `).join('');
+
+            renderPagination('journalists', data.length);
+            updateSortIndicators('journalists');
+        }
+
+        // Pagination
+        function renderPagination(type, total) {
+            const page = state[type].page;
+            const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+            const container = document.getElementById(`${type}Pagination`);
+
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const pages = [];
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= page - 1 && i <= page + 1)) {
+                    pages.push(i);
+                } else if (pages[pages.length - 1] !== '...') {
+                    pages.push('...');
+                }
+            }
+
+            container.innerHTML = `
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="text-sm font-medium text-slate-600 dark:text-slate-400">
+                        Showing <span class="font-bold text-slate-900 dark:text-slate-100">${(page - 1) * ITEMS_PER_PAGE + 1}</span> to <span class="font-bold text-slate-900 dark:text-slate-100">${Math.min(page * ITEMS_PER_PAGE, total)}</span> of <span class="font-bold text-slate-900 dark:text-slate-100">${total}</span> results
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="changePage('${type}', ${page - 1})" 
+                                ${page === 1 ? 'disabled' : ''}
+                                class="px-4 py-2 rounded-xl font-medium border-2 border-slate-300 dark:border-slate-600 hover:border-teal-500 dark:hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-300 dark:disabled:hover:border-slate-600 disabled:hover:bg-transparent transition-all duration-200 shadow-md hover:shadow-lg">
+                            Previous
+                        </button>
+                        ${pages.map(p => 
+                            p === '...' 
+                                ? '<span class="px-4 py-2 font-bold text-slate-400">...</span>'
+                                : `<button onclick="changePage('${type}', ${p})" 
+                                          class="px-4 py-2 rounded-xl font-bold border-2 transition-all duration-200 shadow-md hover:shadow-lg ${p === page 
+                                              ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white border-transparent shadow-lg shadow-teal-500/30' 
+                                              : 'border-slate-300 dark:border-slate-600 hover:border-teal-500 dark:hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20'}">${p}</button>`
+                        ).join('')}
+                        <button onclick="changePage('${type}', ${page + 1})" 
+                                ${page === totalPages ? 'disabled' : ''}
+                                class="px-4 py-2 rounded-xl font-medium border-2 border-slate-300 dark:border-slate-600 hover:border-teal-500 dark:hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-300 dark:disabled:hover:border-slate-600 disabled:hover:bg-transparent transition-all duration-200 shadow-md hover:shadow-lg">
+                            Next
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function changePage(type, newPage) {
+            state[type].page = newPage;
+            if (type === 'articles') {
+                renderArticlesTable();
+            } else {
+                renderJournalistsTable();
+            }
+        }
+
+        // Sort Indicators
+        function updateSortIndicators(type) {
+            const panel = type === 'articles' ? 'byPaperPanel' : 'byJournalistPanel';
+            const headers = document.querySelectorAll(`#${panel} th[data-sort]`);
+            
+            headers.forEach(th => {
+                const indicator = th.querySelector('.sort-indicator');
+                const sortKey = th.dataset.sort;
+                
+                if (sortKey === state[type].sortKey) {
+                    indicator.textContent = state[type].sortDir === 'asc' ? '▲' : '▼';
+                    th.setAttribute('aria-sort', state[type].sortDir === 'asc' ? 'ascending' : 'descending');
+                } else {
+                    indicator.textContent = '';
+                    th.setAttribute('aria-sort', 'none');
+                }
+            });
+        }
+
+        // Event Handlers
+        function handleSort(type, key) {
+            if (state[type].sortKey === key) {
+                state[type].sortDir = state[type].sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                state[type].sortKey = key;
+                state[type].sortDir = 'asc';
+            }
+
+            if (type === 'articles') {
+                renderArticlesTable();
+            } else {
+                renderJournalistsTable();
+            }
+        }
+
+        // Tab Switching
+        function switchTab(tabName) {
+            state.activeTab = tabName;
+
+            // Update tab buttons
+            const tabs = ['byPaperTab', 'byJournalistTab'];
+            const panels = ['byPaperPanel', 'byJournalistPanel'];
+
+            tabs.forEach((tab, idx) => {
+                const button = document.getElementById(tab);
+                const panel = document.getElementById(panels[idx]);
+                const isActive = (tabName === 'byPaper' && idx === 0) || (tabName === 'byJournalist' && idx === 1);
+
+                button.setAttribute('aria-selected', isActive);
+                if (isActive) {
+                    button.className = 'relative px-8 py-4 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg shadow-teal-500/30';
+                    panel.classList.remove('hidden');
+                } else {
+                    button.className = 'relative px-8 py-4 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/50 dark:hover:bg-slate-700/50';
+                    panel.classList.add('hidden');
+                }
+            });
+        }
+
+        // Dark Mode
+        function initDarkMode() {
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const html = document.documentElement;
+
+            // Check localStorage or system preference
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                html.classList.add('dark');
+            }
+
+            darkModeToggle.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+            });
+        }
+
+        // Update KPIs
+        function updateKPIs() {
+            document.getElementById('totalArticles').textContent = articles.length;
+            document.getElementById('totalJournalists').textContent = journalists.length;
+            
+            const avgCred = Math.round(
+                articles.reduce((sum, a) => sum + a.credibility, 0) / articles.length
+            );
+            document.getElementById('avgCredibility').textContent = avgCred;
+        }
+
+        // Initialize
+        function init() {
+            initDarkMode();
+            updateKPIs();
+
+            // Mobile menu toggle
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
+            const menuIconOpen = document.getElementById('menuIconOpen');
+            const menuIconClose = document.getElementById('menuIconClose');
+
+            mobileMenuToggle.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                menuIconOpen.classList.toggle('hidden');
+                menuIconClose.classList.toggle('hidden');
+            });
+
+            // Close mobile menu when clicking on a link
+            const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                    menuIconOpen.classList.remove('hidden');
+                    menuIconClose.classList.add('hidden');
+                });
+            });
+
+            // Smooth scroll for navigation links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    const href = this.getAttribute('href');
+                    if (href === '#dashboard' || href === '#') {
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                });
+            });
+
+            // Tab event listeners
+            document.getElementById('byPaperTab').addEventListener('click', () => switchTab('byPaper'));
+            document.getElementById('byJournalistTab').addEventListener('click', () => switchTab('byJournalist'));
+
+            // Keyboard navigation for tabs
+            const tabButtons = document.querySelectorAll('[role="tab"]');
+            tabButtons.forEach((tab, idx) => {
+                tab.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        tabButtons[(idx - 1 + tabButtons.length) % tabButtons.length].focus();
+                    } else if (e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        tabButtons[(idx + 1) % tabButtons.length].focus();
+                    } else if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        tab.click();
+                    }
+                });
+            });
+
+            // Articles filters
+            document.getElementById('searchArticles').addEventListener('input', (e) => {
+                state.articles.search = e.target.value;
+                applyArticleFilters();
+                renderArticlesTable();
+            });
+
+            document.getElementById('filterLanguage').addEventListener('change', (e) => {
+                state.articles.filterLanguage = e.target.value;
+                applyArticleFilters();
+                renderArticlesTable();
+            });
+
+            document.getElementById('filterSection').addEventListener('change', (e) => {
+                state.articles.filterSection = e.target.value;
+                applyArticleFilters();
+                renderArticlesTable();
+            });
+
+            // Journalists search
+            document.getElementById('searchJournalists').addEventListener('input', (e) => {
+                state.journalists.search = e.target.value;
+                applyJournalistFilters();
+                renderJournalistsTable();
+            });
+
+            // Sort handlers
+            document.querySelectorAll('#byPaperPanel th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => handleSort('articles', th.dataset.sort));
+            });
+
+            document.querySelectorAll('#byJournalistPanel th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => handleSort('journalists', th.dataset.sort));
+            });
+
+            // Initial render
+            renderArticlesTable();
+            renderJournalistsTable();
+        }
+
+        // Run on load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
