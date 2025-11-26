@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Extension Icons</title>
+</head>
+<body>
+    <h2>Generating extension icons...</h2>
+    <canvas id="canvas16" width="16" height="16"></canvas>
+    <canvas id="canvas48" width="48" height="48"></canvas>
+    <canvas id="canvas128" width="128" height="128"></canvas>
+    
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#2563eb';
+            ctx.roundRect(0, 0, size, size, size * 0.2);
+            ctx.fill();
+            
+            // Circle
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = size * 0.0625;
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size * 0.3125, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Center dot
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size * 0.0625, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cross lines
+            ctx.lineCap = 'round';
+            ctx.lineWidth = size * 0.047;
+            
+            // Top
+            ctx.beginPath();
+            ctx.moveTo(size/2, size * 0.1875);
+            ctx.lineTo(size/2, size * 0.34375);
+            ctx.stroke();
+            
+            // Bottom
+            ctx.beginPath();
+            ctx.moveTo(size/2, size * 0.65625);
+            ctx.lineTo(size/2, size * 0.8125);
+            ctx.stroke();
+            
+            // Left
+            ctx.beginPath();
+            ctx.moveTo(size * 0.1875, size/2);
+            ctx.lineTo(size * 0.34375, size/2);
+            ctx.stroke();
+            
+            // Right
+            ctx.beginPath();
+            ctx.moveTo(size * 0.65625, size/2);
+            ctx.lineTo(size * 0.8125, size/2);
+            ctx.stroke();
+        }
+        
+        // Add roundRect polyfill
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.lineTo(x + w - r, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + r);
+                this.lineTo(x + w, y + h - r);
+                this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                this.lineTo(x + r, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - r);
+                this.lineTo(x, y + r);
+                this.quadraticCurveTo(x, y, x + r, y);
+                this.closePath();
+            };
+        }
+        
+        drawIcon(document.getElementById('canvas16'), 16);
+        drawIcon(document.getElementById('canvas48'), 48);
+        drawIcon(document.getElementById('canvas128'), 128);
+        
+        // Download icons
+        setTimeout(() => {
+            ['16', '48', '128'].forEach(size => {
+                const canvas = document.getElementById('canvas' + size);
+                const link = document.createElement('a');
+                link.download = 'icon' + size + '.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+            
+            alert('Icons downloaded! Place them in the chrome-extension folder.');
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -55,6 +55,109 @@
         </div>
     </div>
 
+    {{-- AUTO-CAPTURE: Chrome Extension (BEST!) --}}
+    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">⭐ BEST: Chrome Extension (Auto-Capture Everything!)</h2>
+        
+        <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 16px; margin-bottom: 16px; border-radius: 4px;">
+            <p style="color: #1e40af; font-weight: 600; margin-bottom: 8px;">🎯 RECOMMENDED - One-click setup, captures everything automatically!</p>
+            <p style="color: #1e40af; font-size: 0.875rem;">Works on ALL websites including Google, Facebook, banking sites - no restrictions!</p>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 8px;">Installation Steps</h3>
+            
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; align-items: start; margin-bottom: 12px;">
+                    <div style="background: #2563eb; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0;">1</div>
+                    <div>
+                        <p style="font-weight: 600; color: #1f2937; margin: 0 0 4px 0;">Download Extension Folder</p>
+                        <p style="color: #6b7280; font-size: 0.875rem; margin: 0 0 8px 0;">The extension is located at: <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">{{ public_path('cypress/chrome-extension') }}</code></p>
+                        <a href="{{ url('/cypress/chrome-extension.zip') }}" download style="display: inline-block; padding: 6px 12px; background: #2563eb; color: white; border-radius: 4px; text-decoration: none; font-size: 0.875rem;">
+                            📦 Download ZIP
+                        </a>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: start; margin-bottom: 12px;">
+                    <div style="background: #2563eb; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0;">2</div>
+                    <div>
+                        <p style="font-weight: 600; color: #1f2937; margin: 0 0 4px 0;">Load Extension in Chrome</p>
+                        <ul style="color: #6b7280; font-size: 0.875rem; margin: 4px 0; padding-left: 20px;">
+                            <li>Open Chrome and go to <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">chrome://extensions/</code></li>
+                            <li>Enable "Developer mode" (toggle in top-right)</li>
+                            <li>Click "Load unpacked"</li>
+                            <li>Select the extracted <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">chrome-extension</code> folder</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: start; margin-bottom: 12px;">
+                    <div style="background: #2563eb; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0;">3</div>
+                    <div>
+                        <p style="font-weight: 600; color: #1f2937; margin: 0 0 4px 0;">Configure Session ID</p>
+                        <p style="color: #6b7280; font-size: 0.875rem; margin: 0 0 8px 0;">Click the extension icon and enter:</p>
+                        <div style="background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 0.875rem;">
+                            <strong>Server URL:</strong> {{ url('/') }}<br>
+                            <strong>Session ID:</strong> <span id="extension-session-id">-</span>
+                            <button onclick="copySessionIdForExtension()" style="margin-top: 4px; padding: 4px 8px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
+                                📋 Copy Session ID
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: start;">
+                    <div style="background: #16a34a; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0;">✓</div>
+                    <div>
+                        <p style="font-weight: 600; color: #16a34a; margin: 0 0 4px 0;">Done! Start Capturing</p>
+                        <p style="color: #6b7280; font-size: 0.875rem; margin: 0;">Click "Enable" in extension popup, then visit any website. Events will be captured automatically!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- AUTO-CAPTURE: TamperMonkey Method --}}
+    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">🚀 Alternative: TamperMonkey (Runs Automatically!)</h2>
+        
+        <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 16px; margin-bottom: 16px; border-radius: 4px;">
+            <p style="color: #065f46; font-weight: 600; margin-bottom: 8px;">✨ This is the BEST solution - No manual clicking needed!</p>
+            <p style="color: #065f46; font-size: 0.875rem;">Install once, and it automatically captures events on EVERY page you visit!</p>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 8px;">Step 1: Install TamperMonkey Extension</h3>
+            <p style="color: #6b7280; margin-bottom: 8px;">Install TamperMonkey from your browser's extension store:</p>
+            <div style="display: flex; gap: 8px;">
+                <a href="https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" style="padding: 8px 16px; background: #2563eb; color: white; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
+                    Chrome/Edge
+                </a>
+                <a href="https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/" target="_blank" style="padding: 8px 16px; background: #ea580c; color: white; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
+                    Firefox
+                </a>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 8px;">Step 2: Install Auto-Capture Script</h3>
+            <p style="color: #6b7280; margin-bottom: 8px;">Click this button to install the userscript:</p>
+            <a href="{{ url('/cypress/cypress-auto-capture.user.js') }}" target="_blank" style="display: inline-block; padding: 12px 24px; background: #10b981; color: white; font-weight: bold; border-radius: 6px; text-decoration: none;">
+                📥 Install Auto-Capture Script
+            </a>
+        </div>
+
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px;">
+            <h3 style="font-weight: 600; color: #92400e; margin-bottom: 8px;">⚙️ Configure Session ID</h3>
+            <p style="color: #92400e; margin-bottom: 8px;">After installing, edit the script and replace <code style="background: #fbbf24; padding: 2px 6px; border-radius: 3px;">YOUR_SESSION_ID_HERE</code> with your current session ID:</p>
+            <p id="userscript-session" style="font-family: monospace; font-weight: 600; color: #92400e; background: white; padding: 8px; border-radius: 4px;">Session ID: <span id="current-session-copy">-</span></p>
+            <button onclick="copySessionId()" style="margin-top: 8px; padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                📋 Copy Session ID
+            </button>
+        </div>
+    </div>
+
     {{-- Alternative: Copy & Paste Method --}}
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
         <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">🔧 Alternative: Manual Injection (Developer Console)</h2>
@@ -130,22 +233,67 @@
 let currentSessionId = null;
 let eventCount = 0;
 
-// Check if there's an active session in localStorage
-const storedSession = localStorage.getItem('cypress_session_id');
-if (storedSession) {
-    currentSessionId = storedSession;
-    console.log('📌 Found active session:', currentSessionId);
-} else {
-    // Create new session
-    currentSessionId = Date.now();
-    console.log('✨ Created new session:', currentSessionId);
+// Fetch current session from server
+fetch('{{ url("/cypress/current-session") }}', {
+    credentials: 'include'
+})
+.then(r => r.json())
+.then(data => {
+    if (data.success && data.session_id) {
+        currentSessionId = data.session_id;
+        console.log('✨ Session ID from server:', currentSessionId);
+    } else {
+        // Fallback to localStorage or create new
+        const storedSession = localStorage.getItem('cypress_session_id');
+        if (storedSession) {
+            currentSessionId = storedSession;
+            console.log('📌 Found active session:', currentSessionId);
+        } else {
+            currentSessionId = Date.now();
+            console.log('✨ Created new session:', currentSessionId);
+        }
+    }
+    
+    // Update UI
+    document.getElementById('current-session').textContent = currentSessionId;
+    document.getElementById('current-session-copy').textContent = currentSessionId;
+    document.getElementById('extension-session-id').textContent = currentSessionId;
+    
+    // Update bookmarklet link
+    updateBookmarkletLink();
+    
+    // Start polling
+    startPolling();
+})
+.catch(() => {
+    // Fallback if API fails
+    const storedSession = localStorage.getItem('cypress_session_id');
+    if (storedSession) {
+        currentSessionId = storedSession;
+    } else {
+        currentSessionId = Date.now();
+    }
+    document.getElementById('current-session').textContent = currentSessionId;
+    document.getElementById('current-session-copy').textContent = currentSessionId;
+    document.getElementById('extension-session-id').textContent = currentSessionId;
+    updateBookmarkletLink();
+    startPolling();
+});
+
+// Copy session ID to clipboard
+function copySessionId() {
+    navigator.clipboard.writeText(currentSessionId).then(() => {
+        alert('✅ Session ID copied: ' + currentSessionId + '\n\nNow paste it in the TamperMonkey script!');
+    });
 }
 
-// Update current session ID on page load
-document.getElementById('current-session').textContent = currentSessionId;
+// Copy session ID for extension
+function copySessionIdForExtension() {
+    navigator.clipboard.writeText(currentSessionId).then(() => {
+        alert('✅ Session ID copied: ' + currentSessionId + '\n\nNow paste it in the Chrome Extension settings!');
+    });
+}
 
-// Update bookmarklet link to use current session
-updateBookmarkletLink();
 
 function updateBookmarkletLink() {
     const link = document.getElementById('bookmarklet-link');
@@ -183,6 +331,8 @@ function startNewSession() {
     
     currentSessionId = Date.now();
     document.getElementById('current-session').textContent = currentSessionId;
+    document.getElementById('current-session-copy').textContent = currentSessionId;
+    document.getElementById('extension-session-id').textContent = currentSessionId;
     eventCount = 0;
     lastEventCount = 0;
     document.getElementById('event-count').textContent = '0';

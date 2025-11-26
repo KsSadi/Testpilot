@@ -1186,6 +1186,23 @@ class CypressController extends Controller
      * @param Request $request
      * @return JsonResponse
      */
+    /**
+     * Get current session ID from dashboard
+     */
+    public function getCurrentSession(): JsonResponse
+    {
+        // Generate or get current session ID using timestamp
+        $sessionId = session('cypress_current_session', now()->timestamp);
+        
+        // Store in session for consistency
+        session(['cypress_current_session' => $sessionId]);
+        
+        return response()->json([
+            'success' => true,
+            'session_id' => (string)$sessionId
+        ]);
+    }
+
     public function getEvents(Request $request): JsonResponse
     {
         $sessionId = $request->input('session_id');

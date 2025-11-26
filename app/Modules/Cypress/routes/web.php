@@ -14,12 +14,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('cypress/export-results', 'CypressController@exportResults')->name('cypress.export');
     Route::get('cypress/test-status', 'CypressController@getTestStatus')->name('cypress.status');
     Route::get('cypress/get-events', 'CypressController@getEvents')->name('cypress.getEvents');
+    Route::get('cypress/current-session', 'CypressController@getCurrentSession')->name('cypress.currentSession');
 });
 
 // Bookmarklet capture endpoint (NO auth - needs to accept from any website)
 Route::post('cypress/capture-event-bookmarklet', 'CypressController@captureEventBookmarklet')->name('cypress.capture.bookmarklet');
 Route::options('cypress/capture-event-bookmarklet', 'CypressController@handleCorsOptions')->name('cypress.capture.bookmarklet.options');
 Route::get('cypress/capture-script.js', 'CypressController@captureScript')->name('cypress.capture.script');
+Route::get('cypress/cypress-auto-capture.user.js', function() {
+    return response()->file(public_path('cypress/cypress-auto-capture.user.js'), [
+        'Content-Type' => 'application/javascript'
+    ]);
+})->name('cypress.userscript');
 
 // Website proxy route (NO auth middleware - needs to work in iframe)
 // Accept all HTTP methods (GET, POST, PUT, DELETE, etc.) for AJAX requests

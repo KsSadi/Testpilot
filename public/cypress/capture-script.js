@@ -12,7 +12,7 @@
     const sessionMatch = scriptSrc.match(/[?&]session=([^&]+)/);
     let sessionId = sessionMatch ? decodeURIComponent(sessionMatch[1]) : null;
     
-    // Always use URL parameter if provided, otherwise check localStorage
+    // CRITICAL: URL parameter ALWAYS takes priority over localStorage
     if (sessionId) {
         // Store the session and server URL for future page loads
         localStorage.setItem('cypress_session_id', sessionId);
@@ -23,15 +23,15 @@
             localStorage.setItem('cypress_server_url', serverUrl);
             console.log('💾 Server URL stored:', serverUrl);
         }
-        console.log('💾 Session stored:', sessionId);
+        console.log('💾 Session stored from URL:', sessionId);
     } else {
-        // No URL parameter, check localStorage
+        // Fallback: No URL parameter, check localStorage (but this shouldn't happen with extension)
         const storedSession = localStorage.getItem('cypress_session_id');
         if (storedSession) {
             sessionId = storedSession;
-            console.log('📌 Resuming session:', sessionId);
+            console.warn('⚠️ Using localStorage session (extension should provide URL parameter):', sessionId);
         } else {
-            // Create new session as fallback
+            // Last resort: Create new session
             sessionId = Date.now().toString();
             localStorage.setItem('cypress_session_id', sessionId);
             console.log('✨ Created new session:', sessionId);
@@ -48,6 +48,7 @@
     console.log('🎯 Cypress Event Capture Started!');
     console.log('📋 Session ID:', sessionId);
     console.log('🌐 Capturing events on:', window.location.href);
+    console.log('🔍 Session source:', sessionId === sessionMatch?.[1] ? 'URL parameter' : 'localStorage');
     
     // Server endpoint - extract from script src
     const scriptUrlObj = new URL(scriptSrc || window.location.href);
