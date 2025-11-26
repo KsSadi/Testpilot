@@ -4,9 +4,24 @@ use Illuminate\Support\Facades\Route;
 
 // Main Cypress testing page - Requires authentication
 Route::middleware(['auth'])->group(function () {
+    // Project Management Routes
+    Route::resource('projects', 'ProjectController');
+
+    // Test Case Management Routes (nested under projects)
+    Route::prefix('projects/{project}')->group(function () {
+        Route::get('test-cases', 'TestCaseController@index')->name('test-cases.index');
+        Route::get('test-cases/create', 'TestCaseController@create')->name('test-cases.create');
+        Route::post('test-cases', 'TestCaseController@store')->name('test-cases.store');
+        Route::get('test-cases/{testCase}', 'TestCaseController@show')->name('test-cases.show');
+        Route::get('test-cases/{testCase}/edit', 'TestCaseController@edit')->name('test-cases.edit');
+        Route::put('test-cases/{testCase}', 'TestCaseController@update')->name('test-cases.update');
+        Route::delete('test-cases/{testCase}', 'TestCaseController@destroy')->name('test-cases.destroy');
+    });
+
+    // Original Cypress Testing Routes
     Route::get('cypress/index', 'CypressController@index')->name('cypress.index');
     Route::get('cypress/bookmarklet', 'CypressController@bookmarklet')->name('cypress.bookmarklet');
-    
+
     // API endpoints for Cypress testing
     Route::post('cypress/start-test', 'CypressController@startTest')->name('cypress.start');
     Route::post('cypress/capture-event', 'CypressController@captureEvent')->name('cypress.capture');
@@ -30,3 +45,4 @@ Route::get('cypress/cypress-auto-capture.user.js', function() {
 // Website proxy route (NO auth middleware - needs to work in iframe)
 // Accept all HTTP methods (GET, POST, PUT, DELETE, etc.) for AJAX requests
 Route::match(['get', 'post', 'put', 'delete', 'patch', 'options'], 'cypress/proxy', 'CypressController@proxyWebsite')->name('cypress.proxy');
+

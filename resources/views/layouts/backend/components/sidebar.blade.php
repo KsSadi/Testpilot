@@ -19,7 +19,7 @@
             </div>
         </div>
     </div>
-    
+
     {{-- Navigation Section --}}
     <nav class="flex-1 overflow-y-auto custom-scrollbar py-4 px-3">
         {{-- Main Menu --}}
@@ -29,7 +29,7 @@
                 <i class="fas fa-home mr-3 text-lg w-5"></i>
                 <span>Dashboard</span>
             </a>
-            
+
             {{-- User Management with Submenu --}}
             @php
                 $isUserManagementActive = Request::is('members*') || Request::is('roles*') || Request::is('permissions*');
@@ -57,13 +57,13 @@
                     </a>
                 </div>
             </div>
-            
 
-            {{-- Cypress Testing --}}
+
+            {{-- Project Management --}}
             @can('edit-settings')
-            <a href="{{ route('cypress.index') }}" class="sidebar-link {{ Request::is('cypress*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
-                <i class="fas fa-vial mr-3 text-lg w-5"></i>
-                <span>Cypress</span>
+            <a href="{{ route('projects.index') }}" class="sidebar-link {{ Request::is('projects*') || Request::is('test-cases*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
+                <i class="fas fa-project-diagram mr-3 text-lg w-5"></i>
+                <span>Project</span>
             </a>
             @endcan
 
@@ -84,24 +84,24 @@
             @endcan
         </div>
     </nav>
-    
+
     {{-- User Info Section at Bottom --}}
     <div class="border-t border-gray-100 p-3">
         <div class="user-section flex items-center space-x-3 p-3 rounded-xl bg-gray-50">
             <div class="relative">
                 @if(Auth::check())
                     @if(Auth::user()->avatar)
-                        <img src="{{ Storage::url(Auth::user()->avatar) }}" 
-                             alt="{{ Auth::user()->name }}" 
+                        <img src="{{ Storage::url(Auth::user()->avatar) }}"
+                             alt="{{ Auth::user()->name }}"
                              class="w-10 h-10 rounded-xl ring-2 ring-cyan-100 object-cover">
                     @else
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=06b6d4&color=fff&font-size=0.4&bold=true" 
-                             alt="{{ Auth::user()->name }}" 
+                        <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=06b6d4&color=fff&font-size=0.4&bold=true"
+                             alt="{{ Auth::user()->name }}"
                              class="w-10 h-10 rounded-xl ring-2 ring-cyan-100">
                     @endif
                 @else
-                    <img src="https://ui-avatars.com/api/?name=Guest&background=06b6d4&color=fff&font-size=0.4&bold=true" 
-                         alt="Guest" 
+                    <img src="https://ui-avatars.com/api/?name=Guest&background=06b6d4&color=fff&font-size=0.4&bold=true"
+                         alt="Guest"
                          class="w-10 h-10 rounded-xl ring-2 ring-cyan-100">
                 @endif
                 <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
