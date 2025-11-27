@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Cypress Event Capture",
+  "name": "Testpilot Event Capture",
   "version": "1.0.0",
-  "description": "Automatically capture user events on any website for Cypress testing",
+  "description": "Automatically capture user events on any website for automated testing with Testpilot",
   "permissions": [
     "storage",
     "activeTab"

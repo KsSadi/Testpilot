@@ -3,6 +3,7 @@
 namespace App\Modules\Cypress\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Cypress\Models\TestCaseEvent;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Storage;
@@ -1134,40 +1135,26 @@ class CypressController extends Controller
             $event = $request->input('event', []);
             $sessionId = $event['session_id'] ?? 'unknown';
 
-            // Create test results directory if it doesn't exist
-            $testDir = storage_path("app/cypress-bookmarklet/{$sessionId}");
-            if (!file_exists($testDir)) {
-                mkdir($testDir, 0755, true);
-            }
+            // Store event in database
+            $testCaseEvent = TestCaseEvent::create([
+                'session_id' => $sessionId,
+                'event_type' => $event['type'] ?? 'unknown',
+                'selector' => $event['selector'] ?? null,
+                'tag_name' => $event['tagName'] ?? null,
+                'url' => $event['url'] ?? null,
+                'value' => $event['value'] ?? null,
+                'attributes' => isset($event['attributes']) ? json_encode($event['attributes']) : null,
+                'event_data' => json_encode($event),
+                'is_saved' => false
+            ]);
 
-            $testFile = $testDir . '/events.json';
-
-            // Load existing events or create new
-            if (file_exists($testFile)) {
-                $results = json_decode(file_get_contents($testFile), true);
-            } else {
-                $results = [
-                    'session_id' => $sessionId,
-                    'start_time' => Carbon::now()->toISOString(),
-                    'status' => 'running',
-                    'events' => []
-                ];
-            }
-
-            // Add new event with timestamp
-            $event['timestamp'] = Carbon::now()->toISOString();
-            $event['sequence'] = count($results['events']) + 1;
-
-            $results['events'][] = $event;
-            $results['last_updated'] = Carbon::now()->toISOString();
-
-            // Save updated results
-            file_put_contents($testFile, json_encode($results, JSON_PRETTY_PRINT));
+            // Get total event count for this session
+            $eventCount = TestCaseEvent::where('session_id', $sessionId)->count();
 
             $response = response()->json([
                 'success' => true,
                 'message' => 'Event captured successfully',
-                'event_count' => count($results['events']),
+                'event_count' => $eventCount,
                 'session_id' => $sessionId
             ]);
 

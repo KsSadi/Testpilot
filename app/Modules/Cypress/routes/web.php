@@ -16,6 +16,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('test-cases/{testCase}/edit', 'TestCaseController@edit')->name('test-cases.edit');
         Route::put('test-cases/{testCase}', 'TestCaseController@update')->name('test-cases.update');
         Route::delete('test-cases/{testCase}', 'TestCaseController@destroy')->name('test-cases.destroy');
+        
+        // Event capture routes
+        Route::get('test-cases/{testCase}/events', 'TestCaseController@getEvents')->name('test-cases.events.get');
+        Route::post('test-cases/{testCase}/events/clear', 'TestCaseController@clearEvents')->name('test-cases.events.clear');
+        Route::post('test-cases/{testCase}/events/save', 'TestCaseController@saveEvents')->name('test-cases.events.save');
+        Route::post('test-cases/{testCase}/events/delete', 'TestCaseController@deleteEvents')->name('test-cases.events.delete');
+        Route::get('test-cases/{testCase}/capture-instructions', 'TestCaseController@captureInstructions')->name('test-cases.capture-instructions');
     });
 
     // Original Cypress Testing Routes

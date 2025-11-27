@@ -14,9 +14,22 @@ class TestCase extends Model
         'name',
         'description',
         'order',
+        'session_id',
         'session_data',
         'status'
     ];
+    
+    protected static function boot()
+    {
+        parent::boot();
+        
+        // Generate unique session_id when creating test case
+        static::creating(function ($testCase) {
+            if (empty($testCase->session_id)) {
+                $testCase->session_id = 'tc_' . time() . '_' . uniqid();
+            }
+        });
+    }
 
     protected $casts = [
         'session_data' => 'array',
@@ -29,19 +42,36 @@ class TestCase extends Model
         return $this->belongsTo(Project::class);
     }
 
+    public function events()
+    {
+        return $this->hasMany(TestCaseEvent::class, 'session_id', 'session_id');
+    }
+
+    public function savedEvents()
+    {
+        return $this->hasMany(TestCaseEvent::class, 'session_id', 'session_id')
+                    ->where('is_saved', true);
+    }
+
+    public function unsavedEvents()
+    {
+        return $this->hasMany(TestCaseEvent::class, 'session_id', 'session_id')
+                    ->where('is_saved', false);
+    }
+
     public function scopeOrdered($query)
     {
         return $query->orderBy('order');
     }
 
-    public function scopePending($query)
+    public function scopeActive($query)
     {
-        return $query->where('status', 'pending');
+        return $query->where('status', 'active');
     }
 
-    public function scopeCompleted($query)
+    public function scopeInactive($query)
     {
-        return $query->where('status', 'completed');
+        return $query->where('status', 'inactive');
     }
 
     public function previousTestCase()

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -12,7 +13,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('test_cases', function (Blueprint $table) {
-            $table->integer('order')->default(0)->after('description');
+            $table->string('session_id')->unique()->after('id');
+        });
+        
+        // Generate unique session IDs for existing test cases
+        DB::table('test_cases')->orderBy('id')->get()->each(function ($testCase) {
+            DB::table('test_cases')
+                ->where('id', $testCase->id)
+                ->update(['session_id' => 'tc_' . time() . '_' . $testCase->id]);
         });
     }
 
@@ -22,7 +30,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('test_cases', function (Blueprint $table) {
-            $table->dropColumn('order');
+            $table->dropColumn('session_id');
         });
     }
 };

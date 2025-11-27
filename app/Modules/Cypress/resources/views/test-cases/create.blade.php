@@ -38,10 +38,8 @@
             <div style="margin-bottom: 20px;">
                 <label for="status" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Status *</label>
                 <select name="status" id="status" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; outline: none;">
-                    <option value="pending" {{ old('status') === 'pending' ? 'selected' : '' }}>Pending</option>
-                    <option value="running" {{ old('status') === 'running' ? 'selected' : '' }}>Running</option>
-                    <option value="completed" {{ old('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-                    <option value="failed" {{ old('status') === 'failed' ? 'selected' : '' }}>Failed</option>
+                    <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                    <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                 </select>
                 @error('status')
                 <p style="color: #dc2626; font-size: 0.875rem; margin-top: 4px;">{{ $message }}</p>

@@ -2,115 +2,229 @@
 document.addEventListener('DOMContentLoaded', () => {
   const serverUrlInput = document.getElementById('serverUrl');
   const sessionIdInput = document.getElementById('sessionId');
-  const statusDiv = document.getElementById('status');
-  const currentSessionSpan = document.getElementById('currentSession');
-  const enableBtn = document.getElementById('enableBtn');
-  const disableBtn = document.getElementById('disableBtn');
   const saveBtn = document.getElementById('saveBtn');
-  const fetchSessionBtn = document.getElementById('fetchSessionBtn');
+  
+  const setupView = document.getElementById('setupView');
+  const activeView = document.getElementById('activeView');
+  const statusSection = document.getElementById('statusSection');
+  const statusBadge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  const eventCounter = document.getElementById('eventCounter');
+  const currentSession = document.getElementById('currentSession');
+  const currentServer = document.getElementById('currentServer');
+  
+  const pauseBtn = document.getElementById('pauseBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const changeSessionBtn = document.getElementById('changeSessionBtn');
+  
+  let isPaused = false;
+  let eventCount = 0;
   
   // Load current configuration
-  chrome.storage.local.get(['serverUrl', 'sessionId', 'isEnabled'], (result) => {
-    serverUrlInput.value = result.serverUrl || 'http://127.0.0.1:3030';
+  chrome.storage.local.get(['serverUrl', 'sessionId', 'isEnabled', 'isPaused', 'eventCount'], (result) => {
+    serverUrlInput.value = result.serverUrl || 'http://127.0.0.1:8000';
     sessionIdInput.value = result.sessionId || '';
-    currentSessionSpan.textContent = result.sessionId || 'Not set';
+    isPaused = result.isPaused || false;
+    eventCount = result.eventCount || 0;
     
-    updateStatus(result.isEnabled || false);
+    if (result.isEnabled && result.sessionId) {
+      showActiveView(result.serverUrl, result.sessionId);
+    } else {
+      showSetupView();
+    }
   });
   
-  // Update status display
-  function updateStatus(isEnabled) {
-    if (isEnabled) {
-      statusDiv.className = 'status enabled';
-      statusDiv.textContent = '✅ Enabled - Capturing events on all pages';
-      enableBtn.disabled = true;
-      disableBtn.disabled = false;
+  // Show setup view
+  function showSetupView() {
+    setupView.style.display = 'block';
+    activeView.style.display = 'none';
+  }
+  
+  // Show active view
+  function showActiveView(serverUrl, sessionId) {
+    setupView.style.display = 'none';
+    activeView.style.display = 'block';
+    
+    currentSession.textContent = sessionId;
+    currentServer.textContent = serverUrl.replace('http://', '').replace('https://', '');
+    eventCounter.textContent = eventCount;
+    
+    updatePauseState();
+  }
+  
+  // Update pause state UI
+  function updatePauseState() {
+    if (isPaused) {
+      statusSection.classList.add('paused');
+      statusSection.classList.remove('recording');
+      statusBadge.classList.add('paused');
+      statusBadge.classList.remove('recording');
+      statusText.textContent = 'Paused';
+      pauseBtn.textContent = '▶️ Resume';
+      pauseBtn.className = 'btn btn-success';
     } else {
-      statusDiv.className = 'status disabled';
-      statusDiv.textContent = '⚠️ Disabled - Not capturing events';
-      enableBtn.disabled = false;
-      disableBtn.disabled = true;
+      statusSection.classList.remove('paused');
+      statusSection.classList.add('recording');
+      statusBadge.classList.remove('paused');
+      statusBadge.classList.add('recording');
+      statusText.textContent = 'Recording';
+      pauseBtn.textContent = '⏸ Pause';
+      pauseBtn.className = 'btn btn-warning';
     }
   }
   
-  // Fetch session ID from dashboard
-  fetchSessionBtn.addEventListener('click', () => {
-    const serverUrl = serverUrlInput.value.trim();
-    if (!serverUrl) {
-      alert('❌ Please enter Server URL first!');
-      return;
-    }
-    
-    fetchSessionBtn.textContent = '⏳ Fetching...';
-    fetchSessionBtn.disabled = true;
-    
-    // Use API endpoint to get current session
-    fetch(serverUrl + '/cypress/current-session', {
-      credentials: 'include'
-    })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success && data.session_id) {
-          const sessionId = data.session_id;
-          sessionIdInput.value = sessionId;
-          currentSessionSpan.textContent = sessionId;
-          
-          // Auto-save
-          chrome.storage.local.set({ sessionId: sessionId }, () => {
-            alert('✅ Session ID fetched and saved!\n\nSession: ' + sessionId + '\n\nNow click "Enable" to start capturing.');
-          });
-        } else {
-          alert('❌ Could not get session ID from server.');
-        }
-      })
-      .catch(error => {
-        console.error('Fetch error:', error);
-        alert('❌ Error fetching session ID.\n\nMake sure:\n1. Server is running at: ' + serverUrl + '\n2. You are logged in to the dashboard');
-      })
-      .finally(() => {
-        fetchSessionBtn.textContent = '🔄 Fetch';
-        fetchSessionBtn.disabled = false;
-      });
-  });
-  
-  // Save settings
+  // Save and start
   saveBtn.addEventListener('click', () => {
-    const config = {
-      serverUrl: serverUrlInput.value.trim(),
-      sessionId: sessionIdInput.value.trim()
-    };
+    const serverUrl = serverUrlInput.value.trim();
+    const sessionId = sessionIdInput.value.trim();
     
-    if (!config.serverUrl || !config.sessionId) {
-      alert('❌ Please enter both Server URL and Session ID');
+    if (!serverUrl || !sessionId) {
+      showNotification('❌ Error', 'Please enter both Server URL and Session ID');
       return;
     }
     
-    chrome.storage.local.set(config, () => {
-      currentSessionSpan.textContent = config.sessionId;
-      alert('✅ Settings saved!\n\nNow click "Enable" to start capturing.');
-    });
-  });
-  
-  // Enable capturing
-  enableBtn.addEventListener('click', () => {
-    chrome.storage.local.get(['sessionId'], (result) => {
-      if (!result.sessionId) {
-        alert('❌ Please save settings first!');
+    // Validate session ID format
+    if (!sessionId.startsWith('tc_')) {
+      if (!confirm('⚠️ Warning: Session ID should start with "tc_"\n\nMake sure you copied it from a test case page.\n\nContinue anyway?')) {
         return;
       }
+    }
+    
+    // Reset event count for new session
+    eventCount = 0;
+    isPaused = false;
+    
+    chrome.storage.local.set({
+      serverUrl: serverUrl,
+      sessionId: sessionId,
+      isEnabled: true,
+      isPaused: false,
+      eventCount: 0
+    }, () => {
+      // Notify background to reset count
+      chrome.runtime.sendMessage({ action: 'resetEventCount' });
       
-      chrome.storage.local.set({ isEnabled: true }, () => {
-        updateStatus(true);
-        alert('✅ Event capture ENABLED!\n\nVisit any website and events will be captured automatically.');
+      showActiveView(serverUrl, sessionId);
+      showNotification('✅ Started', 'Event capture is now active!');
+      
+      // Reload all tabs to inject script
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+            chrome.tabs.reload(tab.id);
+          }
+        });
       });
     });
   });
   
-  // Disable capturing
-  disableBtn.addEventListener('click', () => {
-    chrome.storage.local.set({ isEnabled: false }, () => {
-      updateStatus(false);
-      alert('⚠️ Event capture DISABLED.\n\nNo events will be captured until you enable it again.');
+  // Pause/Resume button
+  pauseBtn.addEventListener('click', () => {
+    isPaused = !isPaused;
+    
+    chrome.storage.local.set({ isPaused: isPaused }, () => {
+      updatePauseState();
+      showNotification(
+        isPaused ? '⏸ Paused' : '▶️ Resumed',
+        isPaused ? 'Event capture paused' : 'Event capture resumed'
+      );
+      
+      // Update all active tabs
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'updatePauseState',
+              isPaused: isPaused
+            }).catch(() => {
+              // Tab might not have content script, ignore
+            });
+          }
+        });
+      });
     });
   });
+  
+  // Stop button
+  stopBtn.addEventListener('click', () => {
+    if (!confirm('⏹ Stop event capture?\n\nThis will disable capturing on all pages.\n\nTotal events captured: ' + eventCount)) {
+      return;
+    }
+    
+    chrome.storage.local.set({
+      isEnabled: false,
+      isPaused: false,
+      eventCount: 0
+    }, () => {
+      // Send stop message to all tabs
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'stopCapture'
+            }).catch(() => {});
+          }
+        });
+      });
+      
+      showSetupView();
+      showNotification('⏹ Stopped', 'Event capture has been stopped');
+    });
+  });
+  
+  // Change session button
+  changeSessionBtn.addEventListener('click', () => {
+    if (!confirm('🔄 Change session?\n\nThis will stop current capture and return to setup.\n\nEvents captured: ' + eventCount)) {
+      return;
+    }
+    
+    chrome.storage.local.set({
+      isEnabled: false,
+      isPaused: false,
+      eventCount: 0
+    }, () => {
+      showSetupView();
+    });
+  });
+  
+  // Listen for event count updates from background
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('📬 Popup received message:', message);
+    if (message.type === 'EVENT_CAPTURED') {
+      eventCount = message.count;
+      eventCounter.textContent = eventCount;
+      chrome.storage.local.set({ eventCount: eventCount });
+      console.log('✅ Popup updated event count to:', eventCount);
+    }
+  });
+  
+  // Show notification (simple visual feedback)
+  function showNotification(title, message) {
+    // Create temporary notification overlay
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      z-index: 10000;
+      text-align: center;
+      animation: fadeIn 0.2s ease-out;
+    `;
+    notification.innerHTML = `
+      <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">${title}</div>
+      <div style="font-size: 13px; opacity: 0.9;">${message}</div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.animation = 'fadeOut 0.2s ease-out';
+      setTimeout(() => notification.remove(), 200);
+    }, 2000);
+  }
 });

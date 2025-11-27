@@ -57,11 +57,9 @@
                     </td>
                     <td style="padding: 12px 16px;">
                         <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
-                            @if($testCase->status === 'completed') background: #dcfce7; color: #166534;
-                            @elseif($testCase->status === 'running') background: #dbeafe; color: #1e40af;
-                            @elseif($testCase->status === 'failed') background: #fee2e2; color: #b91c1c;
-                            @else background: #f3f4f6; color: #374151;
-                            @endif\">
+                            @if($testCase->status === 'active') background: #dcfce7; color: #166534;
+                            @else background: #f3f4f6; color: #6b7280;
+                            @endif">
                             {{ ucfirst($testCase->status) }}
                         </span>
                     </td>
