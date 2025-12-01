@@ -1,68 +1,67 @@
-@extends('layouts.backend.master')
+<?php $__env->startSection('title', $testCase->name); ?>
 
-@section('title', $testCase->name)
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <!-- Notification Container -->
 <div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;"></div>
 
 <div style="padding: 24px;">
-    {{-- Page Header --}}
+    
     <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">{{ $testCase->name }}</h1>
-            <p style="color: #6b7280;">Test Case #{{ $testCase->order }} - {{ $project->name }}</p>
+            <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;"><?php echo e($testCase->name); ?></h1>
+            <p style="color: #6b7280;">Test Case #<?php echo e($testCase->order); ?> - <?php echo e($project->name); ?></p>
         </div>
         <div style="display: flex; gap: 12px;">
-            <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" style="padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+            <a href="<?php echo e(route('test-cases.edit', [$project, $module, $testCase])); ?>" style="padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
                 <i class="fas fa-edit"></i> Edit
             </a>
-            <a href="{{ route('projects.show', $project) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+            <a href="<?php echo e(route('projects.show', $project)); ?>" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
                 <i class="fas fa-arrow-left"></i> Back
             </a>
         </div>
     </div>
 
-    {{-- Test Case Info --}}
+    
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px;">
             <div>
                 <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Order</p>
-                <p style="font-weight: 600; color: #1f2937; font-size: 1.25rem;">{{ $testCase->order }}</p>
+                <p style="font-weight: 600; color: #1f2937; font-size: 1.25rem;"><?php echo e($testCase->order); ?></p>
             </div>
             <div>
                 <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Status</p>
                 <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
-                    @if($testCase->status === 'active') background: #dcfce7; color: #166534;
-                    @else background: #f3f4f6; color: #6b7280;
-                    @endif">
-                    {{ ucfirst($testCase->status) }}
+                    <?php if($testCase->status === 'active'): ?> background: #dcfce7; color: #166534;
+                    <?php else: ?> background: #f3f4f6; color: #6b7280;
+                    <?php endif; ?>">
+                    <?php echo e(ucfirst($testCase->status)); ?>
+
                 </span>
             </div>
             <div>
                 <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Session ID</p>
-                <p style="font-family: monospace; font-weight: 600; color: #1f2937; font-size: 0.875rem;">{{ $testCase->session_id }}</p>
+                <p style="font-family: monospace; font-weight: 600; color: #1f2937; font-size: 0.875rem;"><?php echo e($testCase->session_id); ?></p>
             </div>
             <div>
                 <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Events Saved</p>
-                <p style="font-weight: 600; color: #16a34a; font-size: 1.25rem;" id="saved-count">{{ $testCase->savedEvents()->count() }}</p>
+                <p style="font-weight: 600; color: #16a34a; font-size: 1.25rem;" id="saved-count"><?php echo e($testCase->savedEvents()->count()); ?></p>
             </div>
         </div>
 
-        @if($testCase->description)
+        <?php if($testCase->description): ?>
         <div style="border-top: 1px solid #e5e7eb; padding-top: 16px;">
             <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Description</p>
-            <p style="color: #1f2937;">{{ $testCase->description }}</p>
+            <p style="color: #1f2937;"><?php echo e($testCase->description); ?></p>
         </div>
-        @endif
+        <?php endif; ?>
     </div>
 
-    {{-- Event Capture Section --}}
+    
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin: 0;">Event Capture</h2>
             <div style="display: flex; gap: 8px;">
-                <a href="{{ route('test-cases.capture-instructions', [$project, $module, $testCase]) }}" target="_blank" style="padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.875rem;">
+                <a href="<?php echo e(route('test-cases.capture-instructions', [$project, $module, $testCase])); ?>" target="_blank" style="padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.875rem;">
                     <i class="fas fa-info-circle"></i> Setup Instructions
                 </a>
                 <button id="live-capture-btn" onclick="toggleLiveCapture()" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
@@ -97,7 +96,7 @@
             </div>
         </div>
 
-        {{-- Tabs for Saved and Unsaved Events --}}
+        
         <div style="margin-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
             <div style="display: flex; gap: 4px; justify-content: space-between; align-items: center;">
                 <div style="display: flex; gap: 4px;">
@@ -117,7 +116,7 @@
             </div>
         </div>
 
-        {{-- Event Monitor for Unsaved Events --}}
+        
         <div id="monitor-unsaved" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.875rem;">
             <div style="color: #9ca3af; text-align: center; padding: 40px;">
                 <i class="fas fa-clock" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
@@ -126,7 +125,7 @@
             </div>
         </div>
 
-        {{-- Event Monitor for Saved Events --}}
+        
         <div id="monitor-saved" style="display: none; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.875rem;">
             <div style="color: #9ca3af; text-align: center; padding: 40px;">
                 <i class="fas fa-save" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
@@ -137,9 +136,9 @@
     </div>
 </div>
 
-<meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
 /* Notification Styles */
 .notification {
@@ -255,11 +254,11 @@
     color: #1f2937;
 }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
-const sessionId = '{{ $testCase->session_id }}';
+const sessionId = '<?php echo e($testCase->session_id); ?>';
 let pollingInterval = null;
 let lastEventCount = 0;
 let currentTab = 'unsaved'; // Start with unsaved tab
@@ -332,7 +331,7 @@ function switchTab(tab) {
 loadAllEvents();
 
 function loadAllEvents() {
-    fetch('{{ route("test-cases.events.get", [$project, $module, $testCase]) }}', {
+    fetch('<?php echo e(route("test-cases.events.get", [$project, $module, $testCase])); ?>', {
         headers: {
             'Accept': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -749,7 +748,7 @@ function startLiveCapture() {
     document.getElementById('live-status').style.color = '#16a34a';
 
     pollingInterval = setInterval(() => {
-        fetch('{{ route("test-cases.events.get", [$project, $module, $testCase]) }}', {
+        fetch('<?php echo e(route("test-cases.events.get", [$project, $module, $testCase])); ?>', {
             headers: {
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -793,7 +792,7 @@ function saveAllEvents() {
         return;
     }
 
-    fetch('{{ route("test-cases.events.save", [$project, $module, $testCase]) }}', {
+    fetch('<?php echo e(route("test-cases.events.save", [$project, $module, $testCase])); ?>', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -827,7 +826,7 @@ function clearUnsavedEvents() {
         return;
     }
 
-    fetch('{{ route("test-cases.events.clear", [$project, $module, $testCase]) }}', {
+    fetch('<?php echo e(route("test-cases.events.clear", [$project, $module, $testCase])); ?>', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -901,7 +900,7 @@ function deleteSelectedEvents() {
         return;
     }
 
-    fetch('{{ route("test-cases.events.delete", [$project, $module, $testCase]) }}', {
+    fetch('<?php echo e(route("test-cases.events.delete", [$project, $module, $testCase])); ?>', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -932,6 +931,8 @@ window.addEventListener('beforeunload', () => {
     stopLiveCapture();
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.backend.master', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Arpa\business automation ltd\sadi vai\Testpilot\app\Modules/Cypress/resources/views/test-cases/show.blade.php ENDPATH**/ ?>

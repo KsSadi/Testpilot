@@ -4,6 +4,7 @@ namespace App\Modules\Cypress\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Cypress\Models\Project;
+use App\Modules\Cypress\Models\Module;
 use App\Modules\Cypress\Models\TestCase;
 use App\Modules\Cypress\Models\TestCaseEvent;
 use Illuminate\Http\Request;
@@ -13,19 +14,21 @@ class TestCaseController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Project $project)
+    public function index(Project $project, Module $module)
     {
-        $testCases = $project->testCases()->orderBy('order')->get();
+        $testCases = $module->testCases()->orderBy('order')->get();
 
         $data = [
-            'pageTitle' => 'Test Cases - ' . $project->name,
+            'pageTitle' => 'Test Cases - ' . $module->name,
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
                 ['title' => 'Test Cases']
             ],
             'project' => $project,
+            'module' => $module,
             'testCases' => $testCases
         ];
 
@@ -35,9 +38,9 @@ class TestCaseController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(Project $project)
+    public function create(Project $project, Module $module)
     {
-        $maxOrder = $project->testCases()->max('order') ?? 0;
+        $maxOrder = $module->testCases()->max('order') ?? 0;
 
         $data = [
             'pageTitle' => 'Create Test Case',
@@ -45,9 +48,11 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
                 ['title' => 'Create Test Case']
             ],
             'project' => $project,
+            'module' => $module,
             'nextOrder' => $maxOrder + 1
         ];
 
@@ -57,7 +62,7 @@ class TestCaseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, Project $project)
+    public function store(Request $request, Project $project, Module $module)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -67,17 +72,18 @@ class TestCaseController extends Controller
         ]);
 
         $validated['project_id'] = $project->id;
+        $validated['module_id'] = $module->id;
 
         $testCase = TestCase::create($validated);
 
-        return redirect()->route('test-cases.index', $project)
+        return redirect()->route('test-cases.index', [$project, $module])
             ->with('success', 'Test case created successfully.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Project $project, TestCase $testCase)
+    public function show(Project $project, Module $module, TestCase $testCase)
     {
         $previousTestCase = $testCase->previousTestCase();
         $nextTestCase = $testCase->nextTestCase();
@@ -88,9 +94,11 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
                 ['title' => $testCase->name]
             ],
             'project' => $project,
+            'module' => $module,
             'testCase' => $testCase,
             'previousTestCase' => $previousTestCase,
             'nextTestCase' => $nextTestCase
@@ -102,7 +110,7 @@ class TestCaseController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Project $project, TestCase $testCase)
+    public function edit(Project $project, Module $module, TestCase $testCase)
     {
         $data = [
             'pageTitle' => 'Edit Test Case',
@@ -110,10 +118,12 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
-                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $testCase])],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
+                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $module, $testCase])],
                 ['title' => 'Edit']
             ],
             'project' => $project,
+            'module' => $module,
             'testCase' => $testCase
         ];
 
@@ -123,7 +133,7 @@ class TestCaseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Project $project, TestCase $testCase)
+    public function update(Request $request, Project $project, Module $module, TestCase $testCase)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -134,25 +144,25 @@ class TestCaseController extends Controller
 
         $testCase->update($validated);
 
-        return redirect()->route('test-cases.index', $project)
+        return redirect()->route('test-cases.index', [$project, $module])
             ->with('success', 'Test case updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Project $project, TestCase $testCase)
+    public function destroy(Project $project, Module $module, TestCase $testCase)
     {
         $testCase->delete();
 
-        return redirect()->route('test-cases.index', $project)
+        return redirect()->route('test-cases.index', [$project, $module])
             ->with('success', 'Test case deleted successfully.');
     }
 
     /**
      * Get events for a test case session
      */
-    public function getEvents(Project $project, TestCase $testCase)
+    public function getEvents(Project $project, Module $module, TestCase $testCase)
     {
         $events = $testCase->events()->orderBy('created_at', 'desc')->get();
 
@@ -168,7 +178,7 @@ class TestCaseController extends Controller
     /**
      * Clear all unsaved events for a test case
      */
-    public function clearEvents(Project $project, TestCase $testCase)
+    public function clearEvents(Project $project, Module $module, TestCase $testCase)
     {
         $deletedCount = $testCase->unsavedEvents()->delete();
 
@@ -182,7 +192,7 @@ class TestCaseController extends Controller
     /**
      * Save all unsaved events for a test case
      */
-    public function saveEvents(Project $project, TestCase $testCase)
+    public function saveEvents(Project $project, Module $module, TestCase $testCase)
     {
         $updated = $testCase->unsavedEvents()->update(['is_saved' => true]);
 
@@ -196,10 +206,10 @@ class TestCaseController extends Controller
     /**
      * Delete selected events
      */
-    public function deleteEvents(Request $request, Project $project, TestCase $testCase)
+    public function deleteEvents(Request $request, Project $project, Module $module, TestCase $testCase)
     {
         $eventIds = $request->input('event_ids', []);
-        
+
         if (empty($eventIds)) {
             return response()->json([
                 'success' => false,
@@ -221,7 +231,7 @@ class TestCaseController extends Controller
     /**
      * Show event capture instructions page
      */
-    public function captureInstructions(Project $project, TestCase $testCase)
+    public function captureInstructions(Project $project, Module $module, TestCase $testCase)
     {
         $data = [
             'pageTitle' => 'Event Capture Instructions',
@@ -229,13 +239,29 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
-                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $testCase])],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
+                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $module, $testCase])],
                 ['title' => 'Capture Instructions']
             ],
             'project' => $project,
+            'module' => $module,
             'testCase' => $testCase
         ];
 
         return view('Cypress::test-cases.capture-instructions', $data);
+    }
+
+    /**
+     * Download Chrome extension ZIP file
+     */
+    public function downloadExtension()
+    {
+        $filePath = public_path('cypress/chrome-extension.zip');
+
+        if (!file_exists($filePath)) {
+            abort(404, 'Extension file not found');
+        }
+
+        return response()->download($filePath, 'chrome-extension.zip');
     }
 }

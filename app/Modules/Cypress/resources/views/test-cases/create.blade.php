@@ -7,7 +7,7 @@
     <div style="max-width: 800px; margin: 0 auto;">
         <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 24px;">Create New Test Case</h1>
 
-        <form action="{{ route('test-cases.store', $project) }}" method="POST" style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px;">
+        <form action="{{ route('test-cases.store', [$project, $module]) }}" method="POST" style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px;">
             @csrf
 
             <div style="margin-bottom: 20px;">
@@ -50,7 +50,7 @@
                 <button type="submit" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
                     <i class="fas fa-save"></i> Create Test Case
                 </button>
-                <a href="{{ route('projects.show', $project) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                <a href="{{ route('modules.show', [$project, $module]) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
                     <i class="fas fa-times"></i> Cancel
                 </a>
             </div>

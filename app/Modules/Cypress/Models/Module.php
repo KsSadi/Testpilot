@@ -4,17 +4,17 @@ namespace App\Modules\Cypress\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Models\User;
 
-class Project extends Model
+class Module extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'project_id',
         'name',
         'description',
-        'status',
-        'created_by'
+        'order',
+        'status'
     ];
 
     protected $casts = [
@@ -23,23 +23,15 @@ class Project extends Model
     ];
 
     /**
-     * Get the user who created the project
+     * Get the project that owns the module
      */
-    public function creator()
+    public function project()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Project::class);
     }
 
     /**
-     * Get all modules for this project
-     */
-    public function modules()
-    {
-        return $this->hasMany(Module::class)->orderBy('order');
-    }
-
-    /**
-     * Get all test cases for this project
+     * Get all test cases for this module
      */
     public function testCases()
     {
@@ -47,7 +39,7 @@ class Project extends Model
     }
 
     /**
-     * Scope active projects
+     * Scope active modules
      */
     public function scopeActive($query)
     {
@@ -55,7 +47,7 @@ class Project extends Model
     }
 
     /**
-     * Scope inactive projects
+     * Scope inactive modules
      */
     public function scopeInactive($query)
     {

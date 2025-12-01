@@ -11,6 +11,7 @@ class TestCase extends Model
 
     protected $fillable = [
         'project_id',
+        'module_id',
         'name',
         'description',
         'order',
@@ -18,11 +19,11 @@ class TestCase extends Model
         'session_data',
         'status'
     ];
-    
+
     protected static function boot()
     {
         parent::boot();
-        
+
         // Generate unique session_id when creating test case
         static::creating(function ($testCase) {
             if (empty($testCase->session_id)) {
@@ -40,6 +41,11 @@ class TestCase extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function module()
+    {
+        return $this->belongsTo(Module::class);
     }
 
     public function events()
@@ -76,16 +82,26 @@ class TestCase extends Model
 
     public function previousTestCase()
     {
-        return self::where('project_id', $this->project_id)
-            ->where('order', '<', $this->order)
+        $query = self::where('project_id', $this->project_id);
+
+        if ($this->module_id) {
+            $query->where('module_id', $this->module_id);
+        }
+
+        return $query->where('order', '<', $this->order)
             ->orderBy('order', 'desc')
             ->first();
     }
 
     public function nextTestCase()
     {
-        return self::where('project_id', $this->project_id)
-            ->where('order', '>', $this->order)
+        $query = self::where('project_id', $this->project_id);
+
+        if ($this->module_id) {
+            $query->where('module_id', $this->module_id);
+        }
+
+        return $query->where('order', '>', $this->order)
             ->orderBy('order', 'asc')
             ->first();
     }

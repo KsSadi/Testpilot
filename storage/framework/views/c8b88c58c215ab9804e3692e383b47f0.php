@@ -1,26 +1,24 @@
-@extends('layouts.backend.master')
+<?php $__env->startSection('title', 'Event Capture Instructions'); ?>
 
-@section('title', 'Event Capture Instructions')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div style="padding: 24px;">
-    {{-- Page Header --}}
+    
     <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
         <div>
             <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">Event Capture Instructions</h1>
-            <p style="color: #6b7280;">Setup guide for Test Case: <strong>{{ $testCase->name }}</strong></p>
+            <p style="color: #6b7280;">Setup guide for Test Case: <strong><?php echo e($testCase->name); ?></strong></p>
         </div>
-        <a href="{{ route('test-cases.show', [$project, $module, $testCase]) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+        <a href="<?php echo e(route('test-cases.show', [$project, $module, $testCase])); ?>" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
             <i class="fas fa-arrow-left"></i> Back to Test Case
         </a>
     </div>
 
-    {{-- Session ID Display --}}
+    
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 24px; margin-bottom: 24px; color: white;">
         <div style="text-align: center;">
             <p style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px;">Your Unique Session ID</p>
             <div style="background: rgba(255,255,255,0.2); border-radius: 6px; padding: 16px; margin-bottom: 12px;">
-                <p id="session-id-display" style="font-family: monospace; font-weight: bold; font-size: 1.5rem; margin: 0;">{{ $testCase->session_id }}</p>
+                <p id="session-id-display" style="font-family: monospace; font-weight: bold; font-size: 1.5rem; margin: 0;"><?php echo e($testCase->session_id); ?></p>
             </div>
             <button onclick="copySessionId()" style="padding: 8px 24px; background: white; color: #667eea; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
                 <i class="fas fa-copy"></i> Copy Session ID
@@ -29,7 +27,7 @@
         </div>
     </div>
 
-    {{-- Method 1: Bookmarklet --}}
+    
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
         <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">📚 Method 1: Bookmarklet (Easiest)</h2>
 
@@ -44,7 +42,8 @@
                    draggable="true"
                    style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; border-radius: 8px; text-decoration: none; font-size: 1.125rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: grab;"
                    onclick="alert('Please DRAG this button to your bookmarks bar!'); return false;">
-                    🎯 {{ $testCase->name }}
+                    🎯 <?php echo e($testCase->name); ?>
+
                 </a>
                 <p style="color: #6b7280; margin-top: 12px; font-size: 0.875rem;">
                     <i class="fas fa-hand-rock"></i> Click and hold to drag
@@ -67,7 +66,7 @@
         </div>
     </div>
 
-    {{-- Method 2: Chrome Extension --}}
+    
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
         <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">⭐ Method 2: Chrome Extension (Auto-Capture)</h2>
 
@@ -81,9 +80,9 @@
 
             <ol style="color: #6b7280; padding-left: 20px;">
                 <li style="margin-bottom: 12px;">
-                    <strong>Download Extension:</strong> Located at <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">{{ public_path('cypress/chrome-extension') }}</code>
+                    <strong>Download Extension:</strong> Located at <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;"><?php echo e(public_path('cypress/chrome-extension')); ?></code>
                     <br>
-                    <a href="{{ route('cypress.download-extension') }}" style="display: inline-block; margin-top: 4px; padding: 6px 12px; background: #2563eb; color: white; border-radius: 4px; text-decoration: none; font-size: 0.875rem;">
+                    <a href="<?php echo e(route('cypress.download-extension')); ?>" style="display: inline-block; margin-top: 4px; padding: 6px 12px; background: #2563eb; color: white; border-radius: 4px; text-decoration: none; font-size: 0.875rem;">
                         📦 Download ZIP
                     </a>
                 </li>
@@ -99,8 +98,9 @@
                 <li style="margin-bottom: 12px;">
                     <strong>Configure Extension:</strong>
                     <div style="background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 8px; margin-top: 4px; font-family: monospace; font-size: 0.875rem;">
-                        <strong>Server URL:</strong> {{ url('/') }}<br>
-                        <strong>Session ID:</strong> {{ $testCase->session_id }}
+                        <strong>Server URL:</strong> <?php echo e(url('/')); ?><br>
+                        <strong>Session ID:</strong> <?php echo e($testCase->session_id); ?>
+
                     </div>
                 </li>
                 <li><strong>Done!</strong> Enable in extension popup and start browsing</li>
@@ -108,7 +108,7 @@
         </div>
     </div>
 
-    {{-- Method 3: Manual Console --}}
+    
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px;">
         <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">🔧 Method 3: Manual Console Injection</h2>
 
@@ -117,7 +117,7 @@
         <div style="position: relative;">
             <pre id="console-code" style="background: #1f2937; color: #e5e7eb; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 0.875rem; font-family: 'Courier New', monospace; margin: 0;">(function() {
     var script = document.createElement('script');
-    script.src = '{{ url('/cypress/capture-script.js') }}?session={{ $testCase->session_id }}&t=' + Date.now();
+    script.src = '<?php echo e(url('/cypress/capture-script.js')); ?>?session=<?php echo e($testCase->session_id); ?>&t=' + Date.now();
     document.body.appendChild(script);
 })();</pre>
             <button onclick="copyConsoleCode()" style="position: absolute; top: 8px; right: 8px; padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
@@ -127,12 +127,12 @@
     </div>
 </div>
 
-<meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
-const sessionId = '{{ $testCase->session_id }}';
-const serverUrl = '{{ url('/') }}';
+const sessionId = '<?php echo e($testCase->session_id); ?>';
+const serverUrl = '<?php echo e(url('/')); ?>';
 
 // Update bookmarklet link
 const bookmarkletCode = `javascript:(function(){var s='${sessionId}',u='${serverUrl}';localStorage.setItem('cypress_session_id',s);localStorage.setItem('cypress_server_url',u);var c=document.createElement('script');c.src=u+'/cypress/capture-script.js?session='+s+'&t='+Date.now();(document.head||document.body||document.documentElement).appendChild(c);console.log('Cypress capture active. Session:',s);})();`;
@@ -181,9 +181,9 @@ function copyConsoleCode() {
     });
 }
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
 kbd {
     padding: 2px 6px;
@@ -260,6 +260,8 @@ code {
     }
 }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.backend.master', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\Arpa\business automation ltd\sadi vai\Testpilot\app\Modules/Cypress/resources/views/test-cases/capture-instructions.blade.php ENDPATH**/ ?>
