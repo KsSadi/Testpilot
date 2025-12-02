@@ -33,6 +33,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('test-cases/{testCase}/events/save', 'TestCaseController@saveEvents')->name('test-cases.events.save');
             Route::post('test-cases/{testCase}/events/delete', 'TestCaseController@deleteEvents')->name('test-cases.events.delete');
             Route::get('test-cases/{testCase}/capture-instructions', 'TestCaseController@captureInstructions')->name('test-cases.capture-instructions');
+            Route::get('test-cases/{testCase}/generate-cypress', 'TestCaseController@generateCypressCode')->name('test-cases.generate-cypress');
         });
     });
 

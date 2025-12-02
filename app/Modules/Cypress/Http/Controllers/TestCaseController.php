@@ -264,4 +264,279 @@ class TestCaseController extends Controller
 
         return response()->download($filePath, 'chrome-extension.zip');
     }
+
+    /**
+     * Generate Cypress test code from saved events
+     */
+    public function generateCypressCode(Project $project, Module $module, TestCase $testCase)
+    {
+        // Get only saved events, ordered by creation time
+        $events = TestCaseEvent::where('session_id', $testCase->session_id)
+            ->where('is_saved', true)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($events->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No saved events found. Please save some events first.'
+            ], 400);
+        }
+
+        // Generate Cypress code
+        $cypressCode = $this->convertEventsToCypressCode($events, $project, $module, $testCase);
+
+        // Create filename based on test case
+        $filename = $this->sanitizeFilename($testCase->name) . '.cy.js';
+
+        // Return as downloadable file
+        return response($cypressCode)
+            ->header('Content-Type', 'application/javascript')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    /**
+     * Convert events to Cypress test code
+     */
+    private function convertEventsToCypressCode($events, $project, $module, $testCase)
+    {
+        // Check if any events use xpath
+        $usesXpath = false;
+        foreach ($events as $event) {
+            $eventData = json_decode($event->event_data, true);
+            if ($eventData && isset($eventData['selectors']['xpath'])) {
+                $selectors = $eventData['selectors'];
+                // Check if xpath will be used (no better selector available)
+                if (empty($selectors['testId']) && empty($selectors['id']) && 
+                    empty($selectors['name']) && empty($selectors['ariaLabel']) && 
+                    empty($selectors['placeholder'])) {
+                    $usesXpath = true;
+                    break;
+                }
+            }
+        }
+
+        $code = "// Auto-generated Cypress Test\n";
+        $code .= "// Project: {$project->name}\n";
+        $code .= "// Module: {$module->name}\n";
+        $code .= "// Test Case: {$testCase->name}\n";
+        $code .= "// Generated: " . now()->format('Y-m-d H:i:s') . "\n";
+        
+        if ($usesXpath) {
+            $code .= "//\n";
+            $code .= "// NOTE: This test uses XPath selectors.\n";
+            $code .= "// Install cypress-xpath plugin:\n";
+            $code .= "//   npm install -D cypress-xpath\n";
+            $code .= "// Then add to cypress/support/e2e.js:\n";
+            $code .= "//   require('cypress-xpath')\n";
+            $code .= "//\n";
+        }
+        
+        $code .= "\n";
+
+        $code .= "describe('{$testCase->name}', () => {\n";
+        
+        // Get the first URL from events
+        $firstUrl = null;
+        foreach ($events as $event) {
+            if ($event->url) {
+                $firstUrl = $event->url;
+                break;
+            }
+        }
+
+        if ($firstUrl) {
+            $code .= "  beforeEach(() => {\n";
+            $code .= "    cy.visit('{$firstUrl}')\n";
+            $code .= "  })\n\n";
+        }
+
+        $code .= "  it('should execute test steps', () => {\n";
+
+        $previousUrl = $firstUrl;
+        
+        foreach ($events as $index => $event) {
+            $eventData = json_decode($event->event_data, true);
+            
+            // Skip if event data is invalid
+            if (!$eventData) {
+                continue;
+            }
+
+            // Check if URL changed (navigation)
+            if ($event->url && $event->url !== $previousUrl) {
+                $code .= "    // Navigation detected\n";
+                $code .= "    cy.url().should('include', '" . parse_url($event->url, PHP_URL_PATH) . "')\n";
+                $previousUrl = $event->url;
+            }
+
+            // Convert event to Cypress command
+            $cypressCommand = $this->eventToCypressCommand($event, $eventData);
+            
+            if ($cypressCommand) {
+                $code .= $cypressCommand;
+            }
+        }
+
+        $code .= "  })\n";
+        $code .= "})\n";
+
+        return $code;
+    }
+
+    /**
+     * Convert a single event to Cypress command
+     */
+    private function eventToCypressCommand($event, $eventData)
+    {
+        $eventType = strtolower($event->event_type);
+        $selector = $this->getBestSelector($eventData);
+        
+        if (!$selector) {
+            return "    // Unable to generate selector for {$eventType} event\n";
+        }
+
+        // Check if selector is xpath (starts with xpath()
+        $isXpath = strpos($selector, 'xpath(') === 0;
+        $getCommand = $isXpath ? 'cy.' . $selector : "cy.get('{$selector}')";
+
+        $command = '';
+        
+        switch ($eventType) {
+            case 'click':
+                $text = $eventData['text'] ?? $eventData['innerText'] ?? '';
+                $comment = $text ? " // Click: " . substr($text, 0, 30) : '';
+                $command = "    {$getCommand}.click(){$comment}\n";
+                break;
+
+            case 'input':
+                $value = $event->value ?? $eventData['value'] ?? '';
+                if ($value) {
+                    $escapedValue = addslashes($value);
+                    $fieldName = $this->getFieldName($eventData);
+                    $comment = $fieldName ? " // Input: {$fieldName}" : '';
+                    $command = "    {$getCommand}.clear().type('{$escapedValue}'){$comment}\n";
+                }
+                break;
+
+            case 'change':
+            case 'select':
+                if (isset($eventData['selectedText']) || isset($eventData['selectedValue'])) {
+                    $selectValue = $eventData['selectedText'] ?? $eventData['selectedValue'] ?? '';
+                    $escapedValue = addslashes($selectValue);
+                    $command = "    {$getCommand}.select('{$escapedValue}') // Select: {$selectValue}\n";
+                }
+                break;
+
+            case 'checkbox':
+            case 'radio':
+                if (isset($eventData['checked'])) {
+                    $action = $eventData['checked'] ? 'check' : 'uncheck';
+                    $fieldName = $this->getFieldName($eventData);
+                    $comment = $fieldName ? " // {$fieldName}" : '';
+                    $command = "    {$getCommand}.{$action}(){$comment}\n";
+                }
+                break;
+
+            case 'file':
+            case 'file_upload':
+                if (isset($eventData['fileNames']) && !empty($eventData['fileNames'])) {
+                    $files = implode(', ', array_map('addslashes', $eventData['fileNames']));
+                    $command = "    // File upload: {$files}\n";
+                    $command .= "    // {$getCommand}.selectFile('path/to/file')\n";
+                }
+                break;
+
+            case 'submit':
+            case 'form_submit':
+                $command = "    {$getCommand}.submit() // Form submission\n";
+                break;
+
+            default:
+                $command = "    // {$eventType}: {$selector}\n";
+        }
+
+        return $command;
+    }
+
+    /**
+     * Get best selector based on priority: testId > id > name > ariaLabel > placeholder > xpath
+     */
+    private function getBestSelector($eventData)
+    {
+        $selectors = $eventData['selectors'] ?? [];
+
+        // Priority order - Stable selectors first
+        if (!empty($selectors['testId'])) {
+            return '[data-testid="' . addslashes($selectors['testId']) . '"]';
+        }
+        
+        if (!empty($selectors['id'])) {
+            return '#' . addslashes($selectors['id']);
+        }
+        
+        if (!empty($selectors['name'])) {
+            return '[name="' . addslashes($selectors['name']) . '"]';
+        }
+        
+        if (!empty($selectors['ariaLabel'])) {
+            return '[aria-label="' . addslashes($selectors['ariaLabel']) . '"]';
+        }
+        
+        if (!empty($selectors['placeholder'])) {
+            return '[placeholder="' . addslashes($selectors['placeholder']) . '"]';
+        }
+
+        // Fall back to cypressSelector (already contains preferred selector)
+        if (!empty($eventData['cypressSelector'])) {
+            // If cypressSelector contains xpath, format it for Cypress xpath plugin
+            $cypressSelector = $eventData['cypressSelector'];
+            if (strpos($cypressSelector, '/html') === 0 || strpos($cypressSelector, '//') === 0 || strpos($cypressSelector, '//*') === 0) {
+                // This is an xpath, use xpath() syntax for cypress-xpath plugin
+                return "xpath('" . addslashes($cypressSelector) . "')";
+            }
+            return $cypressSelector;
+        }
+
+        // Fall back to xpath from selectors
+        if (!empty($selectors['xpath'])) {
+            // Use xpath() syntax for cypress-xpath plugin
+            return "xpath('" . addslashes($selectors['xpath']) . "')";
+        }
+
+        // Last resort - use the tagName with index if available
+        if (!empty($eventData['tagName'])) {
+            return strtolower($eventData['tagName']);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get field name for better comments
+     */
+    private function getFieldName($eventData)
+    {
+        $selectors = $eventData['selectors'] ?? [];
+        
+        return $selectors['name'] ?? 
+               $selectors['id'] ?? 
+               $selectors['placeholder'] ?? 
+               $selectors['ariaLabel'] ?? 
+               null;
+    }
+
+    /**
+     * Sanitize filename
+     */
+    private function sanitizeFilename($name)
+    {
+        // Replace spaces and special characters
+        $name = preg_replace('/[^a-zA-Z0-9-_]/', '-', $name);
+        $name = preg_replace('/-+/', '-', $name);
+        $name = trim($name, '-');
+        
+        return strtolower($name);
+    }
 }
+
