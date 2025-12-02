@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Modules\Cypress\Models\TestCaseEvent;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Storage;
-use Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class CypressController extends Controller
@@ -1135,15 +1135,20 @@ class CypressController extends Controller
             $event = $request->input('event', []);
             $sessionId = $event['session_id'] ?? 'unknown';
 
-            // Store event in database
+            // Extract enhanced event data
+            $selectors = $event['selectors'] ?? [];
+            $eventType = $event['type'] ?? 'unknown';
+
+            // Store event in database with complete information
             $testCaseEvent = TestCaseEvent::create([
                 'session_id' => $sessionId,
-                'event_type' => $event['type'] ?? 'unknown',
-                'selector' => $event['selector'] ?? null,
+                'event_type' => $eventType,
+                'selector' => $event['cypressSelector'] ?? null,
                 'tag_name' => $event['tagName'] ?? null,
-                'url' => $event['url'] ?? null,
+                'url' => $event['pageUrl'] ?? $event['url'] ?? null,
                 'value' => $event['value'] ?? null,
-                'attributes' => isset($event['attributes']) ? json_encode($event['attributes']) : null,
+                'inner_text' => $event['innerText'] ?? $event['text'] ?? null,
+                'attributes' => !empty($selectors) ? json_encode($selectors) : null,
                 'event_data' => json_encode($event),
                 'is_saved' => false
             ]);

@@ -12,6 +12,11 @@
             <p style="color: #6b7280;">Test Case #<?php echo e($testCase->order); ?> - <?php echo e($project->name); ?></p>
         </div>
         <div style="display: flex; gap: 12px;">
+            <a href="<?php echo e(route('test-cases.generate-cypress', [$project, $module, $testCase])); ?>" 
+               id="generate-cypress-btn"
+               style="padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-code"></i> Generate Cypress Code
+            </a>
             <a href="<?php echo e(route('test-cases.edit', [$project, $module, $testCase])); ?>" style="padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
                 <i class="fas fa-edit"></i> Edit
             </a>

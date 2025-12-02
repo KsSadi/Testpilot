@@ -307,8 +307,8 @@ class TestCaseController extends Controller
             if ($eventData && isset($eventData['selectors']['xpath'])) {
                 $selectors = $eventData['selectors'];
                 // Check if xpath will be used (no better selector available)
-                if (empty($selectors['testId']) && empty($selectors['id']) && 
-                    empty($selectors['name']) && empty($selectors['ariaLabel']) && 
+                if (empty($selectors['testId']) && empty($selectors['id']) &&
+                    empty($selectors['name']) && empty($selectors['ariaLabel']) &&
                     empty($selectors['placeholder'])) {
                     $usesXpath = true;
                     break;
@@ -321,7 +321,7 @@ class TestCaseController extends Controller
         $code .= "// Module: {$module->name}\n";
         $code .= "// Test Case: {$testCase->name}\n";
         $code .= "// Generated: " . now()->format('Y-m-d H:i:s') . "\n";
-        
+
         if ($usesXpath) {
             $code .= "//\n";
             $code .= "// NOTE: This test uses XPath selectors.\n";
@@ -331,11 +331,11 @@ class TestCaseController extends Controller
             $code .= "//   require('cypress-xpath')\n";
             $code .= "//\n";
         }
-        
+
         $code .= "\n";
 
         $code .= "describe('{$testCase->name}', () => {\n";
-        
+
         // Get the first URL from events
         $firstUrl = null;
         foreach ($events as $event) {
@@ -354,10 +354,10 @@ class TestCaseController extends Controller
         $code .= "  it('should execute test steps', () => {\n";
 
         $previousUrl = $firstUrl;
-        
+
         foreach ($events as $index => $event) {
             $eventData = json_decode($event->event_data, true);
-            
+
             // Skip if event data is invalid
             if (!$eventData) {
                 continue;
@@ -372,7 +372,7 @@ class TestCaseController extends Controller
 
             // Convert event to Cypress command
             $cypressCommand = $this->eventToCypressCommand($event, $eventData);
-            
+
             if ($cypressCommand) {
                 $code .= $cypressCommand;
             }
@@ -390,8 +390,16 @@ class TestCaseController extends Controller
     private function eventToCypressCommand($event, $eventData)
     {
         $eventType = strtolower($event->event_type);
+
+        // Handle navigation events
+        if ($eventType === 'navigation') {
+            $url = $eventData['url'] ?? '';
+            $path = parse_url($url, PHP_URL_PATH);
+            return "    // Navigation to: {$url}\n    cy.url().should('include', '{$path}')\n";
+        }
+
         $selector = $this->getBestSelector($eventData);
-        
+
         if (!$selector) {
             return "    // Unable to generate selector for {$eventType} event\n";
         }
@@ -401,12 +409,20 @@ class TestCaseController extends Controller
         $getCommand = $isXpath ? 'cy.' . $selector : "cy.get('{$selector}')";
 
         $command = '';
-        
+
         switch ($eventType) {
             case 'click':
-                $text = $eventData['text'] ?? $eventData['innerText'] ?? '';
-                $comment = $text ? " // Click: " . substr($text, 0, 30) : '';
-                $command = "    {$getCommand}.click(){$comment}\n";
+                $text = $eventData['innerText'] ?? $eventData['text'] ?? '';
+                $label = $eventData['selectors']['label'] ?? '';
+                $comment = $label ? " // Click: {$label}" : ($text ? " // Click: " . substr($text, 0, 30) : '');
+
+                // If clicking a link with external URL, add wait for navigation
+                if (isset($eventData['targetUrl']) && $eventData['isExternal']) {
+                    $command = "    {$getCommand}.click() // External link: {$eventData['targetUrl']}\n";
+                    $command .= "    cy.url().should('not.equal', '" . ($eventData['pageUrl'] ?? '') . "') // Wait for navigation\n";
+                } else {
+                    $command = "    {$getCommand}.click(){$comment}\n";
+                }
                 break;
 
             case 'input':
@@ -414,7 +430,8 @@ class TestCaseController extends Controller
                 if ($value) {
                     $escapedValue = addslashes($value);
                     $fieldName = $this->getFieldName($eventData);
-                    $comment = $fieldName ? " // Input: {$fieldName}" : '';
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $comment = $label ? " // Input: {$label}" : ($fieldName ? " // Input: {$fieldName}" : '');
                     $command = "    {$getCommand}.clear().type('{$escapedValue}'){$comment}\n";
                 }
                 break;
@@ -424,7 +441,9 @@ class TestCaseController extends Controller
                 if (isset($eventData['selectedText']) || isset($eventData['selectedValue'])) {
                     $selectValue = $eventData['selectedText'] ?? $eventData['selectedValue'] ?? '';
                     $escapedValue = addslashes($selectValue);
-                    $command = "    {$getCommand}.select('{$escapedValue}') // Select: {$selectValue}\n";
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $comment = $label ? " // {$label}" : '';
+                    $command = "    {$getCommand}.select('{$escapedValue}'){$comment} // Select: {$selectValue}\n";
                 }
                 break;
 
@@ -432,8 +451,9 @@ class TestCaseController extends Controller
             case 'radio':
                 if (isset($eventData['checked'])) {
                     $action = $eventData['checked'] ? 'check' : 'uncheck';
+                    $label = $eventData['selectors']['label'] ?? '';
                     $fieldName = $this->getFieldName($eventData);
-                    $comment = $fieldName ? " // {$fieldName}" : '';
+                    $comment = $label ? " // {$label}" : ($fieldName ? " // {$fieldName}" : '');
                     $command = "    {$getCommand}.{$action}(){$comment}\n";
                 }
                 break;
@@ -442,7 +462,9 @@ class TestCaseController extends Controller
             case 'file_upload':
                 if (isset($eventData['fileNames']) && !empty($eventData['fileNames'])) {
                     $files = implode(', ', array_map('addslashes', $eventData['fileNames']));
-                    $command = "    // File upload: {$files}\n";
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $comment = $label ? " // {$label}" : '';
+                    $command = "    // File upload: {$files}{$comment}\n";
                     $command .= "    // {$getCommand}.selectFile('path/to/file')\n";
                 }
                 break;
@@ -460,7 +482,7 @@ class TestCaseController extends Controller
     }
 
     /**
-     * Get best selector based on priority: testId > id > name > ariaLabel > placeholder > xpath
+     * Get best selector based on priority: testId > id > name > ariaLabel > placeholder > label > xpath
      */
     private function getBestSelector($eventData)
     {
@@ -470,21 +492,28 @@ class TestCaseController extends Controller
         if (!empty($selectors['testId'])) {
             return '[data-testid="' . addslashes($selectors['testId']) . '"]';
         }
-        
+
         if (!empty($selectors['id'])) {
             return '#' . addslashes($selectors['id']);
         }
-        
+
         if (!empty($selectors['name'])) {
             return '[name="' . addslashes($selectors['name']) . '"]';
         }
-        
+
         if (!empty($selectors['ariaLabel'])) {
             return '[aria-label="' . addslashes($selectors['ariaLabel']) . '"]';
         }
-        
+
         if (!empty($selectors['placeholder'])) {
             return '[placeholder="' . addslashes($selectors['placeholder']) . '"]';
+        }
+
+        // Try label (new addition)
+        if (!empty($selectors['label'])) {
+            // Labels are usually used for form fields, try to find by label text
+            // This is a heuristic approach
+            return null; // We'll use cypressSelector or xpath instead
         }
 
         // Fall back to cypressSelector (already contains preferred selector)
@@ -518,11 +547,12 @@ class TestCaseController extends Controller
     private function getFieldName($eventData)
     {
         $selectors = $eventData['selectors'] ?? [];
-        
-        return $selectors['name'] ?? 
-               $selectors['id'] ?? 
-               $selectors['placeholder'] ?? 
-               $selectors['ariaLabel'] ?? 
+
+        return $selectors['label'] ??
+               $selectors['name'] ??
+               $selectors['id'] ??
+               $selectors['placeholder'] ??
+               $selectors['ariaLabel'] ??
                null;
     }
 
@@ -535,7 +565,7 @@ class TestCaseController extends Controller
         $name = preg_replace('/[^a-zA-Z0-9-_]/', '-', $name);
         $name = preg_replace('/-+/', '-', $name);
         $name = trim($name, '-');
-        
+
         return strtolower($name);
     }
 }
