@@ -4,14 +4,16 @@ namespace App\Modules\Cypress\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\HasHashedRouteKey;
 
 class TestCase extends Model
 {
-    use HasFactory;
+    use HasFactory, HasHashedRouteKey;
 
     protected $fillable = [
         'project_id',
         'module_id',
+        'created_by',
         'name',
         'description',
         'order',
@@ -28,6 +30,10 @@ class TestCase extends Model
         static::creating(function ($testCase) {
             if (empty($testCase->session_id)) {
                 $testCase->session_id = 'tc_' . time() . '_' . uniqid();
+            }
+            // Set created_by to current authenticated user
+            if (empty($testCase->created_by) && auth()->check()) {
+                $testCase->created_by = auth()->id();
             }
         });
     }
@@ -46,6 +52,11 @@ class TestCase extends Model
     public function module()
     {
         return $this->belongsTo(Module::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
 
     public function events()

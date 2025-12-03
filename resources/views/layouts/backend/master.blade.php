@@ -30,6 +30,9 @@
     @stack('styles')
 </head>
 <body class="bg-gray-50">
+    {{-- Global Notification System --}}
+    @include('layouts.backend.components.notification')
+    
     {{-- Mobile Sidebar Overlay --}}
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
     

@@ -14,7 +14,8 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        $projects = Project::with('creator', 'modules')
+        $projects = Project::where('created_by', auth()->id())
+            ->with('creator', 'modules')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 

@@ -1,99 +1,165 @@
 @extends('layouts.backend.master')
 
-@section('title', 'Test Cases - ' . $project->name)
+@section('title', 'Test Cases - ' . $module->name)
+
+@section('breadcrumb')
+    <div class="flex items-center space-x-2 text-sm">
+        <a href="{{ url('/dashboard') }}" class="text-gray-500 hover:text-cyan-600">Home</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <span class="text-gray-500">Cypress Testing</span>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <a href="{{ route('projects.index') }}" class="text-gray-500 hover:text-cyan-600">Projects</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <a href="{{ route('projects.show', $project) }}" class="text-gray-500 hover:text-cyan-600">{{ $project->name }}</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <span class="text-gray-800 font-medium">Test Cases - {{ $module->name }}</span>
+    </div>
+@endsection
 
 @section('content')
-<div style="padding: 24px;">
-    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+    {{-- Page Title Section --}}
+    <div class="page-title-section flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <div>
-            <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">Test Cases - {{ $module->name }}</h1>
-            <p style="color: #6b7280;">Manage test cases for this module</p>
+            <h2 class="text-xl md:text-2xl font-bold text-gray-800">Test Cases - {{ $module->name }}</h2>
+            <p class="text-gray-500 text-xs md:text-sm mt-1">Manage test cases for this module</p>
         </div>
-        <div style="display: flex; gap: 12px;">
-            <a href="{{ route('test-cases.create', [$project, $module]) }}" style="padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-plus"></i> Create Test Case
+        <div class="action-buttons flex items-center space-x-2 w-full md:w-auto">
+            <a href="{{ route('modules.show', [$project, $module]) }}" class="btn-secondary">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Module
             </a>
-            <a href="{{ route('modules.show', [$project, $module]) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-arrow-left"></i> Back to Module
+            <a href="{{ route('test-cases.create', [$project, $module]) }}" class="btn-primary flex-1 md:flex-none text-center">
+                <i class="fas fa-plus mr-2"></i>Create Test Case
             </a>
         </div>
     </div>
 
-    {{-- Success Message --}}
-    @if(session('success'))
-    <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px;">
-        {{ session('success') }}
-    </div>
-    @endif
-
-    {{-- Test Cases List --}}
-    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; overflow: hidden;">
-        @if($testCases->count() > 0)
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                <tr>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Order</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Name</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Description</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Status</th>
-                    <th style="padding: 12px 16px; text-align: right; font-weight: 600; color: #374151;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($testCases as $testCase)
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 16px;">
-                        <span style="padding: 4px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-weight: 600;">
-                            {{ $testCase->order }}
-                        </span>
-                    </td>
-                    <td style="padding: 12px 16px;">
-                        <a href="{{ route('test-cases.show', [$project, $module, $testCase]) }}" style="color: #2563eb; text-decoration: none; font-weight: 500;">
-                            {{ $testCase->name }}
-                        </a>
-                    </td>
-                    <td style="padding: 12px 16px; color: #6b7280;">
-                        {{ Str::limit($testCase->description, 80) ?? 'No description' }}
-                    </td>
-                    <td style="padding: 12px 16px;">
-                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
-                            @if($testCase->status === 'active') background: #dcfce7; color: #166534;
-                            @else background: #f3f4f6; color: #6b7280;
-                            @endif">
-                            {{ ucfirst($testCase->status) }}
-                        </span>
-                    </td>
-                    <td style="padding: 12px 16px; text-align: right;">
-                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                            <a href="{{ route('test-cases.show', [$project, $module, $testCase]) }}" style="padding: 6px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                            <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" style="padding: 6px 12px; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form action="{{ route('test-cases.destroy', [$project, $module, $testCase]) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this test case?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @else
-        <div style="padding: 48px; text-align: center; color: #6b7280;">
-            <i class="fas fa-list-check" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
-            <p style="font-size: 1.125rem; margin: 0;">No test cases yet</p>
-            <p style="margin-top: 8px;">Create your first test case to get started</p>
-            <a href="{{ route('test-cases.create', [$project, $module]) }}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-plus"></i> Create Test Case
-            </a>
+    {{-- Stats Cards --}}
+    <div class="stats-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Total Test Cases</p>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $testCases->count() }}</h3>
+                </div>
+                <div class="primary-color rounded-lg p-3">
+                    <i class="fas fa-list-check text-white text-xl"></i>
+                </div>
+            </div>
         </div>
-        @endif
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Active Cases</p>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $testCases->where('status', 'active')->count() }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-lg p-3">
+                    <i class="fas fa-check-circle text-white text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Inactive Cases</p>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $testCases->where('status', 'inactive')->count() }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg p-3">
+                    <i class="fas fa-pause-circle text-white text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Module</p>
+                    <h3 class="text-lg font-bold text-gray-800">{{ $module->name }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-3">
+                    <i class="fas fa-cube text-white text-xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    {{-- Test Cases Table --}}
+    <div class="bg-white rounded-xl p-4 md:p-5 border border-gray-100 shadow-sm">
+        <div class="overflow-x-auto -mx-4 md:mx-0">
+            <div class="inline-block min-w-full align-middle px-4 md:px-0">
+                <table class="w-full min-w-[640px]">
+                    <thead>
+                        <tr class="border-b border-gray-100">
+                            <th class="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase">Order</th>
+                            <th class="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase">Test Case</th>
+                            <th class="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase">Description</th>
+                            <th class="text-left py-3 px-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                            <th class="text-center py-3 px-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @forelse($testCases as $testCase)
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="py-3 px-3">
+                                    <span class="badge-primary">{{ $testCase->order }}</span>
+                                </td>
+                                <td class="py-3 px-3">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center mr-3">
+                                            <i class="fas fa-list-check text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-gray-800">{{ $testCase->name }}</p>
+                                            <p class="text-xs text-gray-500">Created {{ $testCase->created_at->diffForHumans() }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-3 text-sm text-gray-600">
+                                    {{ Str::limit($testCase->description, 80) ?? 'No description' }}
+                                </td>
+                                <td class="py-3 px-3">
+                                    @if($testCase->status === 'active')
+                                        <span class="badge-success"><i class="fas fa-circle text-[8px] mr-1"></i>Active</span>
+                                    @else
+                                        <span class="badge-warning"><i class="fas fa-circle text-[8px] mr-1"></i>Inactive</span>
+                                    @endif
+                                </td>
+                                <td class="py-3 px-3 text-center">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <a href="{{ route('test-cases.show', [$project, $module, $testCase]) }}" class="p-2 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 rounded-lg transition" title="View Test Case">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" class="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition" title="Edit Test Case">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('test-cases.destroy', [$project, $module, $testCase]) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this test case?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition" title="Delete Test Case">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="py-12 text-center">
+                                    <div class="text-gray-400">
+                                        <i class="fas fa-list-check text-5xl mb-3"></i>
+                                        <p class="text-lg font-medium text-gray-500">No test cases yet</p>
+                                        <p class="text-sm text-gray-400">Create your first test case to get started</p>
+                                        <a href="{{ route('test-cases.create', [$project, $module]) }}" class="btn-primary inline-block mt-4">
+                                            <i class="fas fa-plus mr-2"></i>Create Test Case
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 @endsection

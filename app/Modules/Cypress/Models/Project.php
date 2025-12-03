@@ -5,10 +5,11 @@ namespace App\Modules\Cypress\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\User;
+use App\Traits\HasHashedRouteKey;
 
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, HasHashedRouteKey;
 
     protected $fillable = [
         'name',
@@ -21,6 +22,17 @@ class Project extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($project) {
+            if (empty($project->created_by) && auth()->check()) {
+                $project->created_by = auth()->id();
+            }
+        });
+    }
 
     /**
      * Get the user who created the project

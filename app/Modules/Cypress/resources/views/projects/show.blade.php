@@ -2,122 +2,193 @@
 
 @section('title', $project->name)
 
+@section('breadcrumb')
+    <div class="flex items-center space-x-2 text-sm">
+        <a href="{{ url('/dashboard') }}" class="text-gray-500 hover:text-cyan-600">Home</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <span class="text-gray-500">Cypress Testing</span>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <a href="{{ route('projects.index') }}" class="text-gray-500 hover:text-cyan-600">Projects</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <span class="text-gray-800 font-medium">{{ $project->name }}</span>
+    </div>
+@endsection
+
 @section('content')
-<div style="padding: 24px;">
-    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">{{ $project->name }}</h1>
-            <p style="color: #6b7280;">{{ $project->description ?? 'No description' }}</p>
+    {{-- Page Header --}}
+    <div class="page-title-section flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+        <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+                <h2 class="text-xl md:text-2xl font-bold text-gray-800">{{ $project->name }}</h2>
+                @if($project->status === 'active')
+                    <span class="badge-success"><i class="fas fa-circle text-[8px] mr-1"></i>Active</span>
+                @else
+                    <span class="badge-danger"><i class="fas fa-circle text-[8px] mr-1"></i>Inactive</span>
+                @endif
+            </div>
+            <p class="text-gray-500 text-xs md:text-sm">{{ $project->description ?? 'No description provided' }}</p>
         </div>
-        <div style="display: flex; gap: 12px;">
-            <a href="{{ route('modules.create', $project) }}" style="padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-plus"></i> Add Module
+        <div class="flex items-center space-x-2 w-full md:w-auto">
+            <a href="{{ route('projects.index') }}" class="btn-secondary flex-1 md:flex-none text-center">
+                <i class="fas fa-arrow-left mr-2"></i>Back
             </a>
-            <a href="{{ route('projects.edit', $project) }}" style="padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-edit"></i> Edit
+            <a href="{{ route('modules.create', $project) }}" class="btn-primary flex-1 md:flex-none text-center">
+                <i class="fas fa-plus mr-2"></i>Add Module
+            </a>
+            <a href="{{ route('projects.edit', $project) }}" class="btn-warning flex-1 md:flex-none text-center">
+                <i class="fas fa-edit mr-2"></i>Edit
             </a>
         </div>
     </div>
 
-    {{-- Project Info --}}
-    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Status</p>
-                <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: {{ $project->status === 'active' ? '#dcfce7' : '#fee2e2' }}; color: {{ $project->status === 'active' ? '#166534' : '#b91c1c' }};">
-                    {{ ucfirst($project->status) }}
-                </span>
+    {{-- Stats Cards --}}
+    <div class="stats-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Total Modules</p>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $project->modules->count() }}</h3>
+                </div>
+                <div class="primary-color rounded-lg p-3">
+                    <i class="fas fa-cube text-white text-xl"></i>
+                </div>
             </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Created By</p>
-                <p style="font-weight: 600; color: #1f2937;">{{ $project->creator->name ?? 'Unknown' }}</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Total Test Cases</p>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $project->testCases->count() }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg p-3">
+                    <i class="fas fa-tasks text-white text-xl"></i>
+                </div>
             </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Modules</p>
-                <p style="font-weight: 600; color: #1f2937;">{{ $project->modules->count() }}</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Active Modules</p>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $project->modules->where('status', 'active')->count() }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-lg p-3">
+                    <i class="fas fa-check-circle text-white text-xl"></i>
+                </div>
             </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Total Test Cases</p>
-                <p style="font-weight: 600; color: #1f2937;">{{ $project->testCases->count() }}</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Created By</p>
+                    <h3 class="text-base font-bold text-gray-800">{{ $project->creator->name ?? 'Unknown' }}</h3>
+                    <p class="text-xs text-gray-500">{{ $project->created_at->format('M d, Y') }}</p>
+                </div>
+                <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-3">
+                    <i class="fas fa-user text-white text-xl"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    {{-- Modules List --}}
-    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; overflow: hidden;">
-        <div style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb;">
-            <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin: 0;">Modules</h2>
+    {{-- Modules Section --}}
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-5 border-b border-gray-100">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800">Modules</h3>
+                <p class="text-sm text-gray-500 mt-1">Organize your test cases into modules</p>
+            </div>
+            @if($project->modules->count() > 0)
+            <a href="{{ route('modules.create', $project) }}" class="btn-primary mt-3 md:mt-0">
+                <i class="fas fa-plus mr-2"></i>Add Module
+            </a>
+            @endif
         </div>
 
         @if($project->modules->count() > 0)
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                <tr>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Order</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Name</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Description</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Test Cases</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Status</th>
-                    <th style="padding: 12px 16px; text-align: right; font-weight: 600; color: #374151;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($project->modules as $module)
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 16px;">
-                        <span style="padding: 4px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-weight: 600;">
-                            {{ $module->order }}
-                        </span>
-                    </td>
-                    <td style="padding: 12px 16px;">
-                        <a href="{{ route('modules.show', [$project, $module]) }}" style="color: #2563eb; text-decoration: none; font-weight: 500;">
-                            {{ $module->name }}
-                        </a>
-                    </td>
-                    <td style="padding: 12px 16px; color: #6b7280;">
-                        {{ Str::limit($module->description, 50) ?? 'No description' }}
-                    </td>
-                    <td style="padding: 12px 16px;">
-                        <span style="padding: 4px 8px; background: #f3f4f6; color: #374151; border-radius: 4px; font-weight: 600;">
-                            {{ $module->testCases->count() }}
-                        </span>
-                    </td>
-                    <td style="padding: 12px 16px;">
-                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: {{ $module->status === 'active' ? '#dcfce7' : '#fee2e2' }}; color: {{ $module->status === 'active' ? '#166534' : '#b91c1c' }};">
-                            {{ ucfirst($module->status) }}
-                        </span>
-                    </td>
-                    <td style="padding: 12px 16px; text-align: right;">
-                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                            <a href="{{ route('modules.show', [$project, $module]) }}" style="padding: 6px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{{ route('modules.edit', [$project, $module]) }}" style="padding: 6px 12px; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form action="{{ route('modules.destroy', [$project, $module]) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure? This will delete all test cases in this module.');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+        <div class="overflow-x-auto -mx-4 md:mx-0">
+            <div class="inline-block min-w-full align-middle px-4 md:px-0">
+                <table class="w-full min-w-[640px]">
+                    <thead>
+                        <tr class="border-b border-gray-100">
+                            <th class="text-left py-3 px-5 text-xs font-semibold text-gray-500 uppercase">Order</th>
+                            <th class="text-left py-3 px-5 text-xs font-semibold text-gray-500 uppercase">Module</th>
+                            <th class="text-left py-3 px-5 text-xs font-semibold text-gray-500 uppercase">Description</th>
+                            <th class="text-left py-3 px-5 text-xs font-semibold text-gray-500 uppercase">Test Cases</th>
+                            <th class="text-left py-3 px-5 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                            <th class="text-center py-3 px-5 text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @foreach($project->modules as $module)
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="py-3 px-5">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 bg-cyan-50 text-cyan-700 rounded-lg font-semibold text-sm">
+                                        {{ $module->order }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-5">
+                                    <a href="{{ route('modules.show', [$project, $module]) }}" class="text-cyan-600 hover:text-cyan-700 font-semibold hover:underline">
+                                        {{ $module->name }}
+                                    </a>
+                                </td>
+                                <td class="py-3 px-5">
+                                    <p class="text-sm text-gray-600">{{ Str::limit($module->description, 50) ?? 'No description' }}</p>
+                                </td>
+                                <td class="py-3 px-5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold">
+                                            <i class="fas fa-tasks mr-1 text-[10px]"></i>
+                                            {{ $module->testCases->count() }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-5">
+                                    @if($module->status === 'active')
+                                        <span class="badge-success"><i class="fas fa-circle text-[8px] mr-1"></i>Active</span>
+                                    @else
+                                        <span class="badge-warning"><i class="fas fa-circle text-[8px] mr-1"></i>Inactive</span>
+                                    @endif
+                                </td>
+                                <td class="py-3 px-5 text-center">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <a href="{{ route('modules.show', [$project, $module]) }}" class="p-2 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 rounded-lg transition" title="View Module">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ route('modules.edit', [$project, $module]) }}" class="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition" title="Edit Module">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('modules.destroy', [$project, $module]) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure? This will delete all test cases in this module.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition" title="Delete Module">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
         @else
-        <div style="padding: 48px; text-align: center; color: #6b7280;">
-            <i class="fas fa-cube" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
-            <p style="font-size: 1.125rem; margin: 0;">No modules yet</p>
-            <p style="margin-top: 8px;">Create your first module to organize test cases</p>
-            <a href="{{ route('modules.create', $project) }}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-plus"></i> Create Module
+        {{-- Empty State --}}
+        <div class="py-16 px-4 text-center">
+            <div class="primary-color rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-cube text-white text-3xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">No Modules Yet</h3>
+            <p class="text-gray-500 mb-6 max-w-md mx-auto">
+                Get started by creating your first module to organize test cases
+            </p>
+            <a href="{{ route('modules.create', $project) }}" class="btn-primary inline-flex items-center">
+                <i class="fas fa-plus mr-2"></i>Create First Module
             </a>
         </div>
         @endif
     </div>
-</div>
 @endsection

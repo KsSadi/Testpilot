@@ -2,122 +2,169 @@
 
 @section('title', $testCase->name)
 
-@section('content')
-<!-- Notification Container -->
-<div id="notification-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;"></div>
+@section('breadcrumb')
+    <div class="flex items-center space-x-2 text-sm">
+        <a href="{{ url('/dashboard') }}" class="text-gray-500 hover:text-cyan-600">Home</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <span class="text-gray-500">Cypress Testing</span>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <a href="{{ route('projects.index') }}" class="text-gray-500 hover:text-cyan-600">Projects</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <a href="{{ route('projects.show', $project) }}" class="text-gray-500 hover:text-cyan-600">{{ $project->name }}</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <a href="{{ route('modules.show', [$project, $module]) }}" class="text-gray-500 hover:text-cyan-600">{{ $module->name }}</a>
+        <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+        <span class="text-gray-800 font-medium">{{ $testCase->name }}</span>
+    </div>
+@endsection
 
-<div style="padding: 24px;">
+@section('content')
+
     {{-- Page Header --}}
-    <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">{{ $testCase->name }}</h1>
-            <p style="color: #6b7280;">Test Case #{{ $testCase->order }} - {{ $project->name }}</p>
+    <div class="page-title-section flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+        <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2 flex-wrap">
+                <h2 class="text-xl md:text-2xl font-bold text-gray-800">{{ $testCase->name }}</h2>
+                @if($testCase->status === 'completed')
+                    <span class="badge-success"><i class="fas fa-circle text-[8px] mr-1"></i>Completed</span>
+                @elseif($testCase->status === 'running')
+                    <span class="badge-info"><i class="fas fa-circle text-[8px] mr-1"></i>Running</span>
+                @elseif($testCase->status === 'failed')
+                    <span class="badge-danger"><i class="fas fa-circle text-[8px] mr-1"></i>Failed</span>
+                @else
+                    <span class="badge-warning"><i class="fas fa-circle text-[8px] mr-1"></i>Pending</span>
+                @endif
+            </div>
+            <p class="text-gray-500 text-xs md:text-sm">{{ $testCase->description ?? 'No description provided' }}</p>
         </div>
-        <div style="display: flex; gap: 12px;">
+        <div class="flex items-center gap-2 w-full md:w-auto flex-wrap">
+            <a href="{{ route('modules.show', [$project, $module]) }}" class="btn-secondary flex-1 md:flex-none text-center text-sm">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </a>
             <a href="{{ route('test-cases.generate-cypress', [$project, $module, $testCase]) }}" 
                id="generate-cypress-btn"
-               style="padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
-                <i class="fas fa-code"></i> Generate Cypress Code
+               class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
+                <i class="fas fa-code mr-2"></i>Generate Code
             </a>
-            <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" style="padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-edit"></i> Edit
-            </a>
-            <a href="{{ route('projects.show', $project) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-arrow-left"></i> Back
+            <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" class="btn-warning flex-1 md:flex-none text-center text-sm">
+                <i class="fas fa-edit mr-2"></i>Edit
             </a>
         </div>
     </div>
 
-    {{-- Test Case Info --}}
-    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px;">
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Order</p>
-                <p style="font-weight: 600; color: #1f2937; font-size: 1.25rem;">{{ $testCase->order }}</p>
-            </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Status</p>
-                <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
-                    @if($testCase->status === 'active') background: #dcfce7; color: #166534;
-                    @else background: #f3f4f6; color: #6b7280;
-                    @endif">
-                    {{ ucfirst($testCase->status) }}
-                </span>
-            </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Session ID</p>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <p id="session-id-text" style="font-family: monospace; font-weight: 600; color: #1f2937; font-size: 0.875rem; margin: 0;">{{ $testCase->session_id }}</p>
-                    <button onclick="copySessionId()" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;" title="Copy Session ID">
-                        <i class="fas fa-copy"></i> Copy
-                    </button>
+    {{-- Stats Cards --}}
+    <div class="stats-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Test Case Order</p>
+                    <h3 class="text-2xl font-bold text-gray-800">#{{ $testCase->order }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg p-3">
+                    <i class="fas fa-sort-numeric-up text-white text-xl"></i>
                 </div>
             </div>
-            <div>
-                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Events Saved</p>
-                <p style="font-weight: 600; color: #16a34a; font-size: 1.25rem;" id="saved-count">{{ $testCase->savedEvents()->count() }}</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-500 mb-1">Session ID</p>
+                    <div class="flex items-center gap-2">
+                        <p id="session-id-text" class="font-mono font-semibold text-gray-800 text-xs truncate flex-1">{{ $testCase->session_id }}</p>
+                        <button onclick="copySessionId()" class="p-1.5 bg-cyan-100 hover:bg-cyan-200 text-cyan-700 rounded transition text-xs" title="Copy Session ID">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="primary-color rounded-lg p-3 ml-2">
+                    <i class="fas fa-fingerprint text-white text-xl"></i>
+                </div>
             </div>
         </div>
-
-        @if($testCase->description)
-        <div style="border-top: 1px solid #e5e7eb; padding-top: 16px;">
-            <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Description</p>
-            <p style="color: #1f2937;">{{ $testCase->description }}</p>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Saved Events</p>
+                    <h3 class="text-2xl font-bold text-gray-800" id="saved-count">{{ $testCase->savedEvents()->count() }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-lg p-3">
+                    <i class="fas fa-check-circle text-white text-xl"></i>
+                </div>
+            </div>
         </div>
-        @endif
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Live Status</p>
+                    <p id="live-status" class="font-mono font-semibold text-gray-600 text-lg">Stopped</p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg p-3">
+                    <i class="fas fa-signal text-white text-xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- Event Capture Section --}}
-    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin: 0;">Event Capture</h2>
-            <div style="display: flex; gap: 8px;">
-                <button id="live-capture-btn" onclick="toggleLiveCapture()" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
-                    <i class="fas fa-play"></i> Start Live Event Monitor
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-5 border-b border-gray-100 gap-3">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-radar text-cyan-600"></i>
+                    Event Capture
+                </h3>
+                <p class="text-sm text-gray-500 mt-1">Monitor and save user interactions in real-time</p>
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto flex-wrap">
+                <button id="live-capture-btn" onclick="toggleLiveCapture()" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none">
+                    <i class="fas fa-play"></i> Start Monitor
                 </button>
-                <button onclick="saveAllEvents()" style="padding: 8px 16px; background: #7c3aed; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
+                <button onclick="saveAllEvents()" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none">
                     <i class="fas fa-save"></i> Save Events
                 </button>
-                <button onclick="clearUnsavedEvents()" style="padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
-                    <i class="fas fa-trash"></i> Clear Unsaved
+                <button onclick="clearUnsavedEvents()" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none">
+                    <i class="fas fa-trash"></i> Clear
                 </button>
-                <button id="delete-selected-btn" onclick="deleteSelectedEvents()" style="display: none; padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
-                    <i class="fas fa-trash-alt"></i> Delete Selected (<span id="selected-count">0</span>)
+                <button id="delete-selected-btn" onclick="deleteSelectedEvents()" class="hidden bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm">
+                    <i class="fas fa-trash-alt"></i> Delete (<span id="selected-count">0</span>)
                 </button>
             </div>
         </div>
 
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-                <div>
-                    <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 4px 0;">Saved Events</p>
-                    <p id="saved-count-display" style="font-family: monospace; font-weight: 600; color: #16a34a; margin: 0; font-size: 1.5rem;">0</p>
+        <div class="p-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-100">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white rounded-lg p-4 border border-green-200">
+                    <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Saved Events</p>
+                    <p id="saved-count-display" class="font-mono font-bold text-green-600 text-2xl">0</p>
                 </div>
-                <div>
-                    <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 4px 0;">Unsaved (Live)</p>
-                    <p id="unsaved-count" style="font-family: monospace; font-weight: 600; color: #f59e0b; margin: 0; font-size: 1.5rem;">0</p>
+                <div class="bg-white rounded-lg p-4 border border-orange-200">
+                    <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Unsaved (Live)</p>
+                    <p id="unsaved-count" class="font-mono font-bold text-orange-600 text-2xl">0</p>
                 </div>
-                <div>
-                    <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 4px 0;">Live Status</p>
-                    <p id="live-status" style="font-family: monospace; font-weight: 600; color: #6b7280; margin: 0;">Stopped</p>
+                <div class="bg-white rounded-lg p-4 border border-cyan-200">
+                    <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Monitor Status</p>
+                    <p id="live-status-mobile" class="font-mono font-semibold text-gray-600 text-lg">Stopped</p>
                 </div>
             </div>
         </div>
 
         {{-- Tabs for Saved and Unsaved Events --}}
-        <div style="margin-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
-            <div style="display: flex; gap: 4px; justify-content: space-between; align-items: center;">
-                <div style="display: flex; gap: 4px;">
-                    <button onclick="switchTab('unsaved')" id="tab-unsaved" style="padding: 12px 24px; background: #f59e0b; color: white; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 0.875rem;">
-                        <i class="fas fa-clock"></i> Unsaved (Live) (<span id="tab-unsaved-count">0</span>)
+        <div class="border-b border-gray-200 px-5">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3">
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="switchTab('unsaved')" id="tab-unsaved" class="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none">
+                        <i class="fas fa-clock"></i> Unsaved (<span id="tab-unsaved-count">0</span>)
                     </button>
-                    <button onclick="switchTab('saved')" id="tab-saved" style="padding: 12px 24px; background: #e5e7eb; color: #6b7280; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; font-size: 0.875rem;">
-                        <i class="fas fa-save"></i> Saved Events (<span id="tab-saved-count">0</span>)
+                    <button onclick="switchTab('saved')" id="tab-saved" class="bg-gray-200 text-gray-600 font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none">
+                        <i class="fas fa-save"></i> Saved (<span id="tab-saved-count">0</span>)
                     </button>
                 </div>
-                <div id="saved-actions" style="display: none; padding: 8px 0;">
-                    <label style="display: inline-flex; align-items: center; cursor: pointer; padding: 6px 12px; background: #f3f4f6; border-radius: 6px; font-size: 0.875rem; font-weight: 500;">
-                        <input type="checkbox" id="select-all-saved" onchange="toggleSelectAll()" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                <div id="saved-actions" class="hidden">
+                    <label class="inline-flex items-center cursor-pointer px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-sm font-medium">
+                        <input type="checkbox" id="select-all-saved" onchange="toggleSelectAll()" class="mr-2 w-4 h-4 cursor-pointer text-cyan-600 rounded focus:ring-cyan-500">
                         Select All
                     </label>
                 </div>
@@ -125,141 +172,39 @@
         </div>
 
         {{-- Event Monitor for Unsaved Events --}}
-        <div id="monitor-unsaved" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.875rem;">
-            <div style="color: #9ca3af; text-align: center; padding: 40px;">
-                <i class="fas fa-clock" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
-                <p style="font-size: 1.125rem; margin: 0;">No unsaved events yet</p>
-                <p style="margin-top: 8px;">Use the extension/bookmarklet to capture events - they appear here in real-time</p>
+        <div id="monitor-unsaved" class="p-5 max-h-[600px] overflow-y-auto bg-white font-mono text-sm">
+            <div class="text-center py-12 text-gray-400">
+                <div class="primary-color rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
+                    <i class="fas fa-clock text-white text-3xl"></i>
+                </div>
+                <p class="text-lg font-semibold text-gray-600 mb-2">No unsaved events yet</p>
+                <p class="text-sm">Use the extension/bookmarklet to capture events - they appear here in real-time</p>
             </div>
         </div>
 
         {{-- Event Monitor for Saved Events --}}
-        <div id="monitor-saved" style="display: none; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.875rem;">
-            <div style="color: #9ca3af; text-align: center; padding: 40px;">
-                <i class="fas fa-save" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
-                <p style="font-size: 1.125rem; margin: 0;">No saved events yet</p>
-                <p style="margin-top: 8px;">Capture events using the extension/bookmarklet, then click "Save Events"</p>
+        <div id="monitor-saved" class="hidden p-5 max-h-[600px] overflow-y-auto bg-white font-mono text-sm">
+            <div class="text-center py-12 text-gray-400">
+                <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
+                    <i class="fas fa-save text-white text-3xl"></i>
+                </div>
+                <p class="text-lg font-semibold text-gray-600 mb-2">No saved events yet</p>
+                <p class="text-sm">Capture events using the extension/bookmarklet, then click "Save Events"</p>
             </div>
         </div>
     </div>
-</div>
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 @push('styles')
 <style>
-/* Notification Styles */
-.notification {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    padding: 16px 20px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 300px;
-    animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 4.7s;
-    border-left: 4px solid;
-    position: relative;
-    overflow: hidden;
+/* Event item styles */
+.event-item {
+    @apply bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-3 transition hover:shadow-md;
 }
 
-.notification::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    background: currentColor;
-    animation: progress 5s linear;
-}
-
-@keyframes progress {
-    from { width: 100%; }
-    to { width: 0%; }
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-    }
-    to {
-        opacity: 0;
-    }
-}
-
-.notification-success {
-    border-left-color: #16a34a;
-    color: #16a34a;
-}
-
-.notification-error {
-    border-left-color: #dc2626;
-    color: #dc2626;
-}
-
-.notification-warning {
-    border-left-color: #f59e0b;
-    color: #f59e0b;
-}
-
-.notification-info {
-    border-left-color: #3b82f6;
-    color: #3b82f6;
-}
-
-.notification-icon {
-    font-size: 24px;
-    flex-shrink: 0;
-}
-
-.notification-content {
-    flex: 1;
-}
-
-.notification-title {
-    font-weight: 600;
-    margin: 0 0 4px 0;
-    color: #1f2937;
-}
-
-.notification-message {
-    margin: 0;
-    color: #6b7280;
-    font-size: 0.875rem;
-}
-
-.notification-close {
-    background: none;
-    border: none;
-    color: #9ca3af;
-    cursor: pointer;
-    font-size: 20px;
-    padding: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s;
-}
-
-.notification-close:hover {
-    background: #f3f4f6;
-    color: #1f2937;
+.event-item-unsaved {
+    @apply bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4 mb-3 transition hover:shadow-md;
 }
 </style>
 @endpush
@@ -272,38 +217,6 @@ let lastEventCount = 0;
 let currentTab = 'unsaved'; // Start with unsaved tab
 let selectedEventIds = new Set(); // Track selected events for deletion
 
-// Notification System
-function showNotification(type, title, message) {
-    const container = document.getElementById('notification-container');
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-
-    const icons = {
-        success: '✓',
-        error: '✕',
-        warning: '⚠',
-        info: 'ℹ'
-    };
-
-    notification.innerHTML = `
-        <div class="notification-icon">${icons[type]}</div>
-        <div class="notification-content">
-            <div class="notification-title">${title}</div>
-            <div class="notification-message">${message}</div>
-        </div>
-        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
-    `;
-
-    container.appendChild(notification);
-
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
-}
-
 // Tab switching function
 function switchTab(tab) {
     currentTab = tab;
@@ -315,22 +228,18 @@ function switchTab(tab) {
     const deleteBtn = document.getElementById('delete-selected-btn');
 
     if (tab === 'saved') {
-        savedTab.style.background = '#16a34a';
-        savedTab.style.color = 'white';
-        unsavedTab.style.background = '#e5e7eb';
-        unsavedTab.style.color = '#6b7280';
-        savedMonitor.style.display = 'block';
-        unsavedMonitor.style.display = 'none';
-        savedActions.style.display = 'block';
+        savedTab.className = 'bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
+        unsavedTab.className = 'bg-gray-200 text-gray-600 font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
+        savedMonitor.classList.remove('hidden');
+        unsavedMonitor.classList.add('hidden');
+        savedActions.classList.remove('hidden');
     } else {
-        unsavedTab.style.background = '#f59e0b';
-        unsavedTab.style.color = 'white';
-        savedTab.style.background = '#e5e7eb';
-        savedTab.style.color = '#6b7280';
-        unsavedMonitor.style.display = 'block';
-        savedMonitor.style.display = 'none';
-        savedActions.style.display = 'none';
-        deleteBtn.style.display = 'none';
+        unsavedTab.className = 'bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
+        savedTab.className = 'bg-gray-200 text-gray-600 font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
+        unsavedMonitor.classList.remove('hidden');
+        savedMonitor.classList.add('hidden');
+        savedActions.classList.add('hidden');
+        deleteBtn.classList.add('hidden');
         selectedEventIds.clear();
     }
 }
@@ -357,6 +266,172 @@ function loadAllEvents() {
     });
 }
 
+function displayAllEvents(events) {
+    const savedMonitor = document.getElementById('monitor-saved');
+    const unsavedMonitor = document.getElementById('monitor-unsaved');
+
+    // Clear both monitors
+    savedMonitor.innerHTML = '';
+    unsavedMonitor.innerHTML = '';
+
+    // Filter events
+    const savedEvents = events.filter(e => e.is_saved);
+    const unsavedEvents = events.filter(e => !e.is_saved);
+
+    // Display saved events with DESC numbering (first event = highest number)
+    if (savedEvents.length === 0) {
+        savedMonitor.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+                <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
+                    <i class="fas fa-save text-white text-3xl"></i>
+                </div>
+                <p class="text-lg font-semibold text-gray-600 mb-2">No saved events yet</p>
+                <p class="text-sm">Capture events using the extension/bookmarklet, then click "Save Events"</p>
+            </div>
+        `;
+    } else {
+        savedEvents.forEach((event, index) => {
+            const eventNumber = savedEvents.length - index;
+            displayEvent(event, eventNumber, 'saved', false);
+        });
+    }
+
+    // Display unsaved events with DESC numbering (first event = highest number)
+    if (unsavedEvents.length === 0) {
+        unsavedMonitor.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+                <div class="primary-color rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
+                    <i class="fas fa-clock text-white text-3xl"></i>
+                </div>
+                <p class="text-lg font-semibold text-gray-600 mb-2">No unsaved events yet</p>
+                <p class="text-sm">Use the extension/bookmarklet to capture events - they appear here in real-time</p>
+            </div>
+        `;
+    } else {
+        unsavedEvents.forEach((event, index) => {
+            const eventNumber = unsavedEvents.length - index;
+            displayEvent(event, eventNumber, 'unsaved', false);
+        });
+    }
+
+    // Update tab counts
+    document.getElementById('tab-saved-count').textContent = savedEvents.length;
+    document.getElementById('tab-unsaved-count').textContent = unsavedEvents.length;
+}
+
+function displayEvent(eventData, number = null, tabType = 'saved', scrollToBottom = true) {
+    const monitor = tabType === 'saved' ? document.getElementById('monitor-saved') : document.getElementById('monitor-unsaved');
+
+    // Remove placeholder if exists
+    const placeholder = monitor.querySelector('.text-center');
+    if (placeholder) {
+        monitor.innerHTML = '';
+    }
+
+    const eventItem = document.createElement('div');
+    const bgColor = tabType === 'saved' ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' : 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200';
+    const badgeColor = tabType === 'saved' ? 'bg-green-600' : 'bg-orange-600';
+
+    eventItem.className = `${bgColor} border rounded-lg p-4 mb-3 transition hover:shadow-md`;
+
+    const timestamp = new Date(eventData.created_at).toLocaleString();
+    const eventNumber = number ? `<span class="${badgeColor} text-white px-2 py-1 rounded text-xs font-bold mr-2">#${number}</span>` : '';
+
+    // Add checkbox only for saved events
+    const checkbox = tabType === 'saved' ?
+        `<input type="checkbox" class="event-checkbox w-4 h-4 cursor-pointer mr-2" data-event-id="${eventData.id}" onchange="updateSelectedCount()">`
+        : '';
+
+    // Create user-friendly event title
+    const eventTitle = formatEventTitle(eventData);
+
+    eventItem.innerHTML = `
+        <div class="flex justify-between mb-2 items-center">
+            <div class="flex items-center">
+                ${checkbox}
+                ${eventNumber}
+                <span class="font-bold text-blue-600 text-sm">${eventTitle}</span>
+            </div>
+            <span class="text-gray-500 text-xs">${timestamp}</span>
+        </div>
+        <div class="border-l-2 border-blue-400 pl-3 text-xs text-gray-600 ${checkbox ? 'ml-6' : ''}">
+            ${formatEventDetails(eventData)}
+        </div>
+    `;
+
+    monitor.appendChild(eventItem);
+
+    if (scrollToBottom) {
+        monitor.scrollTop = monitor.scrollHeight;
+    }
+}
+
+function formatEventTitle(eventData) {
+    const eventType = eventData.event_type || 'unknown';
+    let eventJson = null;
+    try {
+        eventJson = typeof eventData.event_data === 'string' ? JSON.parse(eventData.event_data) : eventData.event_data;
+    } catch(e) {}
+
+    const text = eventData.inner_text || eventJson?.innerText || '';
+    const value = eventData.value || eventJson?.value || '';
+    const tagName = eventData.tag_name || eventJson?.tagName || '';
+
+    switch(eventType.toLowerCase()) {
+        case 'click':
+            if (text && text.trim().length > 0) {
+                const displayText = text.substring(0, 40) + (text.length > 40 ? '...' : '');
+                return `🖱️ CLICK: "${displayText}"`;
+            }
+            if (eventJson?.ariaLabel) return `🖱️ CLICK: ${eventJson.ariaLabel}`;
+            if (eventJson?.selectors?.id) return `🖱️ CLICK: ${tagName.toUpperCase()} #${eventJson.selectors.id}`;
+            return `🖱️ CLICK: ${tagName.toUpperCase()}`;
+
+        case 'input':
+            const fieldName = eventJson?.selectors?.name || eventJson?.selectors?.id || eventJson?.placeholder || tagName;
+            if (value) {
+                const displayValue = value.substring(0, 20) + (value.length > 20 ? '...' : '');
+                return `⌨️ INPUT: ${fieldName} = "${displayValue}"`;
+            }
+            return `⌨️ INPUT: ${fieldName}`;
+
+        case 'change':
+            if (eventJson?.selectedText) return `🔄 SELECT: "${eventJson.selectedText}"`;
+            if (eventJson?.checked !== undefined) {
+                const state = eventJson.checked ? 'Checked' : 'Unchecked';
+                return `☑️ CHECKBOX: ${fieldName} (${state})`;
+            }
+            return `🔄 CHANGE: ${tagName.toUpperCase()}`;
+
+        default:
+            return `${eventType.toUpperCase()}`;
+    }
+}
+
+function formatEventDetails(eventData) {
+    let details = [];
+    let eventJson = null;
+    try {
+        eventJson = typeof eventData.event_data === 'string' ? JSON.parse(eventData.event_data) : eventData.event_data;
+    } catch(e) {}
+
+    if (eventJson?.selectors?.id) {
+        details.push(`<strong>📍 ID:</strong> <code class="bg-blue-50 px-1 rounded">#${eventJson.selectors.id}</code>`);
+    }
+
+    if (eventData.value && eventData.event_type !== 'click') {
+        const displayValue = eventData.value.substring(0, 60) + (eventData.value.length > 60 ? '...' : '');
+        details.push(`<strong>💬 Content:</strong> <code class="bg-blue-50 px-1 rounded">${displayValue}</code>`);
+    }
+
+    if (eventJson?.cypressSelector || eventData.selector) {
+        const selector = eventJson?.cypressSelector || eventData.selector;
+        details.push(`<strong>🎯 Selector:</strong> <code class="bg-gray-800 text-green-400 px-1 rounded text-xs">${selector}</code>`);
+    }
+
+    return details.join('<br>');
+}
+
 // Helper function to get user-friendly location info
 function getLocationInfo(eventData, eventJson) {
     const tagName = eventData.tag_name || eventJson?.tagName || '';
@@ -373,77 +448,6 @@ function getLocationInfo(eventData, eventJson) {
     if (eventJson?.selectors?.testId) {
         return `<strong style="color: #7c3aed;">${tagName.toUpperCase()}</strong> with test-id: <code>${eventJson.selectors.testId}</code>`;
     }
-
-    if (eventJson?.ariaLabel) {
-        return `<strong style="color: #dc2626;">${tagName.toUpperCase()}</strong> labeled: <code>${eventJson.ariaLabel}</code>`;
-    }
-
-    if (eventJson?.placeholder) {
-        return `<strong style="color: #ea580c;">${tagName.toUpperCase()}</strong> placeholder: <code>${eventJson.placeholder}</code>`;
-    }
-
-    if (eventJson?.selectors?.className) {
-        const firstClass = eventJson.selectors.className.split(' ')[0];
-        return `<strong style="color: #8b5cf6;">${tagName.toUpperCase()}</strong> with class: <code>.${firstClass}</code>`;
-    }
-
-    if (tagName) {
-        return `<strong style="color: #6366f1;">${tagName.toUpperCase()}</strong> element`;
-    }
-
-    return null;
-}
-
-function displayAllEvents(events) {
-    const savedMonitor = document.getElementById('monitor-saved');
-    const unsavedMonitor = document.getElementById('monitor-unsaved');
-
-    // Clear both monitors
-    savedMonitor.innerHTML = '';
-    unsavedMonitor.innerHTML = '';
-
-    // Filter events - NO reverse, keep original order (oldest first)
-    const savedEvents = events.filter(e => e.is_saved);
-    const unsavedEvents = events.filter(e => !e.is_saved);
-
-    // Display saved events with DESC numbering (first event = highest number)
-    if (savedEvents.length === 0) {
-        savedMonitor.innerHTML = `
-            <div style="color: #9ca3af; text-align: center; padding: 40px;">
-                <i class="fas fa-save" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
-                <p style="font-size: 1.125rem; margin: 0;">No saved events yet</p>
-                <p style="margin-top: 8px;">Capture events using the extension/bookmarklet, then click "Save Events"</p>
-            </div>
-        `;
-    } else {
-        savedEvents.forEach((event, index) => {
-            // Number in descending order: first event gets total count, last gets 1
-            const eventNumber = savedEvents.length - index;
-            displayEvent(event, eventNumber, 'saved', false);
-        });
-    }
-
-    // Display unsaved events with DESC numbering (first event = highest number)
-    if (unsavedEvents.length === 0) {
-        unsavedMonitor.innerHTML = `
-            <div style="color: #9ca3af; text-align: center; padding: 40px;">
-                <i class="fas fa-clock" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
-                <p style="font-size: 1.125rem; margin: 0;">No unsaved events yet</p>
-                <p style="margin-top: 8px;">Use the extension/bookmarklet to capture events - they appear here in real-time</p>
-            </div>
-        `;
-    } else {
-        unsavedEvents.forEach((event, index) => {
-            // Number in descending order: first event gets total count, last gets 1
-            const eventNumber = unsavedEvents.length - index;
-            displayEvent(event, eventNumber, 'unsaved', false);
-        });
-    }
-
-    // Update tab counts
-    document.getElementById('tab-saved-count').textContent = savedEvents.length;
-    document.getElementById('tab-unsaved-count').textContent = unsavedEvents.length;
-}
 
 function displayEvent(eventData, number = null, tabType = 'saved', scrollToBottom = true) {
     const monitor = tabType === 'saved' ? document.getElementById('monitor-saved') : document.getElementById('monitor-unsaved');
@@ -749,11 +753,15 @@ function startLiveCapture() {
     }
 
     const btn = document.getElementById('live-capture-btn');
-    btn.innerHTML = '<i class="fas fa-stop"></i> Stop Event Monitor';
-    btn.style.background = '#dc2626';
+    btn.innerHTML = '<i class="fas fa-stop"></i> Stop Monitor';
+    btn.className = 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none';
 
     document.getElementById('live-status').textContent = 'Active';
     document.getElementById('live-status').style.color = '#16a34a';
+    if(document.getElementById('live-status-mobile')) {
+        document.getElementById('live-status-mobile').textContent = 'Active';
+        document.getElementById('live-status-mobile').style.color = '#16a34a';
+    }
 
     pollingInterval = setInterval(() => {
         fetch('{{ route("test-cases.events.get", [$project, $module, $testCase]) }}', {
@@ -782,11 +790,15 @@ function stopLiveCapture() {
         pollingInterval = null;
 
         const btn = document.getElementById('live-capture-btn');
-        btn.innerHTML = '<i class="fas fa-play"></i> Start Live Event Monitor';
-        btn.style.background = '#16a34a';
+        btn.innerHTML = '<i class="fas fa-play"></i> Start Monitor';
+        btn.className = 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none';
 
         document.getElementById('live-status').textContent = 'Stopped';
         document.getElementById('live-status').style.color = '#6b7280';
+        if(document.getElementById('live-status-mobile')) {
+            document.getElementById('live-status-mobile').textContent = 'Stopped';
+            document.getElementById('live-status-mobile').style.color = '#6b7280';
+        }
 
         showNotification('info', 'Event Monitor Stopped', 'Event monitoring has been paused.');
     }

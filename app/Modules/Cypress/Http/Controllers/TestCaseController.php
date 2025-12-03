@@ -42,6 +42,15 @@ class TestCaseController extends Controller
     {
         $maxOrder = $module->testCases()->max('order') ?? 0;
 
+        // Get test cases from same module that have saved events (for cloning)
+        $clonableTestCases = $module->testCases()
+            ->where('created_by', auth()->id())
+            ->withCount(['events as saved_events_count' => function($query) {
+                $query->where('is_saved', true);
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         $data = [
             'pageTitle' => 'Create Test Case',
             'breadcrumbs' => [
@@ -53,7 +62,8 @@ class TestCaseController extends Controller
             ],
             'project' => $project,
             'module' => $module,
-            'nextOrder' => $maxOrder + 1
+            'nextOrder' => $maxOrder + 1,
+            'clonableTestCases' => $clonableTestCases
         ];
 
         return view('Cypress::test-cases.create', $data);
@@ -68,13 +78,55 @@ class TestCaseController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'order' => 'required|integer|min:0',
-            'status' => 'required|in:active,inactive'
+            'status' => 'required|in:active,inactive',
+            'clone_from' => 'nullable|exists:test_cases,id'
         ]);
 
         $validated['project_id'] = $project->id;
         $validated['module_id'] = $module->id;
 
         $testCase = TestCase::create($validated);
+
+        // Clone events from selected test case if specified
+        if ($request->filled('clone_from')) {
+            $sourceTestCase = TestCase::find($request->clone_from);
+            
+            // Security: Verify source test case belongs to same module and user
+            if ($sourceTestCase && 
+                $sourceTestCase->module_id === $module->id && 
+                $sourceTestCase->created_by === auth()->id()) {
+                
+                // Get all saved events from source test case
+                $sourceEvents = $sourceTestCase->events()
+                    ->where('is_saved', true)
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+                
+                if ($sourceEvents->isNotEmpty()) {
+                    // Generate new session_id for cloned events
+                    $newSessionId = 'tc_' . time() . '_' . uniqid();
+                    
+                    // Clone events with new session_id and current timestamps
+                    foreach ($sourceEvents as $sourceEvent) {
+                        TestCaseEvent::create([
+                            'session_id' => $newSessionId,
+                            'event_type' => $sourceEvent->event_type,
+                            'selector' => $sourceEvent->selector,
+                            'event_data' => $sourceEvent->event_data, // JSON data
+                            'is_saved' => true,
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                    }
+                    
+                    // Update test case with new session_id
+                    $testCase->update(['session_id' => $newSessionId]);
+                    
+                    return redirect()->route('test-cases.show', [$project, $module, $testCase])
+                        ->with('success', 'Test case created and ' . $sourceEvents->count() . ' events cloned successfully.');
+                }
+            }
+        }
 
         return redirect()->route('test-cases.index', [$project, $module])
             ->with('success', 'Test case created successfully.');
