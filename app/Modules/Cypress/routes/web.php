@@ -32,8 +32,10 @@ Route::middleware(['auth'])->group(function () {
             Route::post('test-cases/{testCase}/events/clear', 'TestCaseController@clearEvents')->name('test-cases.events.clear');
             Route::post('test-cases/{testCase}/events/save', 'TestCaseController@saveEvents')->name('test-cases.events.save');
             Route::post('test-cases/{testCase}/events/delete', 'TestCaseController@deleteEvents')->name('test-cases.events.delete');
+            Route::get('test-cases/{testCase}/saved-events', 'TestCaseController@savedEventsHistory')->name('test-cases.saved-events');
             Route::get('test-cases/{testCase}/capture-instructions', 'TestCaseController@captureInstructions')->name('test-cases.capture-instructions');
             Route::get('test-cases/{testCase}/generate-cypress', 'TestCaseController@generateCypressCode')->name('test-cases.generate-cypress');
+            Route::get('test-cases/{testCase}/download-cypress', 'TestCaseController@downloadCypressCode')->name('test-cases.download-cypress');
         });
     });
 

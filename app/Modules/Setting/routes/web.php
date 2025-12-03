@@ -2,6 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Modules\Setting\Http\Controllers\SettingController;
+use App\Modules\Setting\Http\Controllers\SearchController;
+
+// Global Search API (Protected with authentication)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/search', [SearchController::class, 'search'])->name('api.search');
+});
 
 // Settings Routes (Protected with authentication and permissions)
 Route::middleware(['auth'])->group(function () {

@@ -391,6 +391,34 @@ class TestCaseController extends Controller
     }
 
     /**
+     * Show saved events history page
+     */
+    public function savedEventsHistory(Project $project, Module $module, TestCase $testCase)
+    {
+        $savedEvents = $testCase->savedEvents()
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $data = [
+            'pageTitle' => 'Saved Events History - ' . $testCase->name,
+            'breadcrumbs' => [
+                ['title' => 'Dashboard', 'url' => route('dashboard.index')],
+                ['title' => 'Projects', 'url' => route('projects.index')],
+                ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
+                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $module, $testCase])],
+                ['title' => 'Saved Events History']
+            ],
+            'project' => $project,
+            'module' => $module,
+            'testCase' => $testCase,
+            'savedEvents' => $savedEvents
+        ];
+
+        return view('Cypress::test-cases.saved-events', $data);
+    }
+
+    /**
      * Show event capture instructions page
      */
     public function captureInstructions(Project $project, Module $module, TestCase $testCase)
@@ -438,11 +466,62 @@ class TestCaseController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
+        // Generate Cypress code
+        $cypressCode = '';
+        $usesXpath = false;
+        $filename = $this->sanitizeFilename($testCase->name) . '.cy.js';
+
+        if (!$events->isEmpty()) {
+            // Check if any events use xpath
+            foreach ($events as $event) {
+                $eventData = json_decode($event->event_data, true);
+                if ($eventData && isset($eventData['selectors']['xpath'])) {
+                    $selectors = $eventData['selectors'];
+                    if (empty($selectors['testId']) && empty($selectors['id']) &&
+                        empty($selectors['name']) && empty($selectors['ariaLabel']) &&
+                        empty($selectors['placeholder'])) {
+                        $usesXpath = true;
+                        break;
+                    }
+                }
+            }
+
+            $cypressCode = $this->convertEventsToCypressCode($events, $project, $module, $testCase);
+        }
+
+        $data = [
+            'pageTitle' => 'Generate Cypress Code',
+            'breadcrumbs' => [
+                ['title' => 'Dashboard', 'url' => route('dashboard.index')],
+                ['title' => 'Projects', 'url' => route('projects.index')],
+                ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
+                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $module, $testCase])],
+                ['title' => 'Generate Code']
+            ],
+            'project' => $project,
+            'module' => $module,
+            'testCase' => $testCase,
+            'events' => $events,
+            'cypressCode' => $cypressCode,
+            'usesXpath' => $usesXpath,
+            'filename' => $filename
+        ];
+
+        return view('Cypress::test-cases.generate-code', $data);
+    }
+
+    public function downloadCypressCode(Project $project, Module $module, TestCase $testCase)
+    {
+        // Get only saved events, ordered by creation time
+        $events = TestCaseEvent::where('session_id', $testCase->session_id)
+            ->where('is_saved', true)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
         if ($events->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No saved events found. Please save some events first.'
-            ], 400);
+            return redirect()->route('test-cases.generate-cypress', [$project, $module, $testCase])
+                ->with('error', 'No saved events found. Please save some events first.');
         }
 
         // Generate Cypress code

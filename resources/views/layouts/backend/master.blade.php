@@ -23,6 +23,14 @@
     {{-- Font Awesome --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    {{-- Alpine.js --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    {{-- Alpine.js cloak style --}}
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    
     {{-- Custom Dashboard CSS --}}
     <link rel="stylesheet" href="{{ asset('assets/backend/css/dashboard.css') }}">
     

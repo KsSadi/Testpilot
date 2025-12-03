@@ -41,6 +41,10 @@
             <a href="{{ route('modules.show', [$project, $module]) }}" class="btn-secondary flex-1 md:flex-none text-center text-sm">
                 <i class="fas fa-arrow-left mr-2"></i>Back
             </a>
+            <a href="{{ route('test-cases.capture-instructions', [$project, $module, $testCase]) }}" 
+               class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
+                <i class="fas fa-book mr-2"></i>Setup Instructions
+            </a>
             <a href="{{ route('test-cases.generate-cypress', [$project, $module, $testCase]) }}" 
                id="generate-cypress-btn"
                class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
@@ -114,12 +118,16 @@
             <div>
                 <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <i class="fas fa-radar text-cyan-600"></i>
-                    Event Capture
+                    Live Event Capture
                 </h3>
                 <p class="text-sm text-gray-500 mt-1">Monitor and save user interactions in real-time</p>
             </div>
             <div class="flex items-center gap-2 w-full md:w-auto flex-wrap">
-                <button id="live-capture-btn" onclick="toggleLiveCapture()" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none">
+                <a href="{{ route('test-cases.saved-events', [$project, $module, $testCase]) }}" 
+                   class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none text-center">
+                    <i class="fas fa-database mr-1"></i> View Saved (<span id="saved-count-badge">{{ $testCase->savedEvents()->count() }}</span>)
+                </a>
+                <button id="live-capture-btn" onclick="toggleLiveCapture()" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none">
                     <i class="fas fa-play"></i> Start Monitor
                 </button>
                 <button onclick="saveAllEvents()" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none">
@@ -128,68 +136,54 @@
                 <button onclick="clearUnsavedEvents()" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm flex-1 md:flex-none">
                     <i class="fas fa-trash"></i> Clear
                 </button>
-                <button id="delete-selected-btn" onclick="deleteSelectedEvents()" class="hidden bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm text-sm">
-                    <i class="fas fa-trash-alt"></i> Delete (<span id="selected-count">0</span>)
-                </button>
             </div>
         </div>
 
-        <div class="p-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-100">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-white rounded-lg p-4 border border-green-200">
-                    <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Saved Events</p>
-                    <p id="saved-count-display" class="font-mono font-bold text-green-600 text-2xl">0</p>
+        <div class="p-5 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-orange-100">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-white rounded-lg p-4 border border-orange-200 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Live Events (Unsaved)</p>
+                            <p id="unsaved-count" class="font-mono font-bold text-orange-600 text-3xl">0</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg p-3">
+                            <i class="fas fa-clock text-white text-2xl"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="bg-white rounded-lg p-4 border border-orange-200">
-                    <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Unsaved (Live)</p>
-                    <p id="unsaved-count" class="font-mono font-bold text-orange-600 text-2xl">0</p>
-                </div>
-                <div class="bg-white rounded-lg p-4 border border-cyan-200">
-                    <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Monitor Status</p>
-                    <p id="live-status-mobile" class="font-mono font-semibold text-gray-600 text-lg">Stopped</p>
-                </div>
-            </div>
-        </div>
-
-        {{-- Tabs for Saved and Unsaved Events --}}
-        <div class="border-b border-gray-200 px-5">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3">
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <button onclick="switchTab('unsaved')" id="tab-unsaved" class="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none">
-                        <i class="fas fa-clock"></i> Unsaved (<span id="tab-unsaved-count">0</span>)
-                    </button>
-                    <button onclick="switchTab('saved')" id="tab-saved" class="bg-gray-200 text-gray-600 font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none">
-                        <i class="fas fa-save"></i> Saved (<span id="tab-saved-count">0</span>)
-                    </button>
-                </div>
-                <div id="saved-actions" class="hidden">
-                    <label class="inline-flex items-center cursor-pointer px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-sm font-medium">
-                        <input type="checkbox" id="select-all-saved" onchange="toggleSelectAll()" class="mr-2 w-4 h-4 cursor-pointer text-cyan-600 rounded focus:ring-cyan-500">
-                        Select All
-                    </label>
+                <div class="bg-white rounded-lg p-4 border border-cyan-200 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-gray-500 mb-1 font-semibold uppercase">Monitor Status</p>
+                            <p id="live-status-mobile" class="font-mono font-semibold text-gray-600 text-xl">Stopped</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-lg p-3">
+                            <i class="fas fa-signal text-white text-2xl"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        {{-- Event Monitor for Unsaved Events --}}
-        <div id="monitor-unsaved" class="p-5 max-h-[600px] overflow-y-auto bg-white font-mono text-sm">
-            <div class="text-center py-12 text-gray-400">
-                <div class="primary-color rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
-                    <i class="fas fa-clock text-white text-3xl"></i>
+        {{-- Live Events Monitor (Unsaved Only) --}}
+        <div id="monitor-unsaved" class="p-5 max-h-[700px] overflow-y-auto bg-white">
+            <div class="text-center py-16 text-gray-400">
+                <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4 opacity-20">
+                    <i class="fas fa-clock text-white text-4xl"></i>
                 </div>
-                <p class="text-lg font-semibold text-gray-600 mb-2">No unsaved events yet</p>
-                <p class="text-sm">Use the extension/bookmarklet to capture events - they appear here in real-time</p>
-            </div>
-        </div>
-
-        {{-- Event Monitor for Saved Events --}}
-        <div id="monitor-saved" class="hidden p-5 max-h-[600px] overflow-y-auto bg-white font-mono text-sm">
-            <div class="text-center py-12 text-gray-400">
-                <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
-                    <i class="fas fa-save text-white text-3xl"></i>
+                <p class="text-xl font-semibold text-gray-700 mb-2">No Live Events Captured Yet</p>
+                <p class="text-sm text-gray-500 mb-4">Start the monitor and interact with your website to capture events in real-time</p>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto text-left text-sm text-gray-700">
+                    <p class="font-semibold text-blue-800 mb-2"><i class="fas fa-info-circle mr-1"></i> Quick Start:</p>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Click "Setup Instructions" for setup guide</li>
+                        <li>Click "Start Monitor" button above</li>
+                        <li>Use extension/bookmarklet to capture events</li>
+                        <li>Events appear here automatically</li>
+                        <li>Click "Save Events" when done</li>
+                    </ol>
                 </div>
-                <p class="text-lg font-semibold text-gray-600 mb-2">No saved events yet</p>
-                <p class="text-sm">Capture events using the extension/bookmarklet, then click "Save Events"</p>
             </div>
         </div>
     </div>
@@ -214,40 +208,11 @@
 const sessionId = '{{ $testCase->session_id }}';
 let pollingInterval = null;
 let lastEventCount = 0;
-let currentTab = 'unsaved'; // Start with unsaved tab
-let selectedEventIds = new Set(); // Track selected events for deletion
 
-// Tab switching function
-function switchTab(tab) {
-    currentTab = tab;
-    const savedTab = document.getElementById('tab-saved');
-    const unsavedTab = document.getElementById('tab-unsaved');
-    const savedMonitor = document.getElementById('monitor-saved');
-    const unsavedMonitor = document.getElementById('monitor-unsaved');
-    const savedActions = document.getElementById('saved-actions');
-    const deleteBtn = document.getElementById('delete-selected-btn');
+// Load unsaved events on page load
+loadUnsavedEvents();
 
-    if (tab === 'saved') {
-        savedTab.className = 'bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
-        unsavedTab.className = 'bg-gray-200 text-gray-600 font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
-        savedMonitor.classList.remove('hidden');
-        unsavedMonitor.classList.add('hidden');
-        savedActions.classList.remove('hidden');
-    } else {
-        unsavedTab.className = 'bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
-        savedTab.className = 'bg-gray-200 text-gray-600 font-semibold px-4 py-2 rounded-t-lg transition text-sm flex-1 sm:flex-none';
-        unsavedMonitor.classList.remove('hidden');
-        savedMonitor.classList.add('hidden');
-        savedActions.classList.add('hidden');
-        deleteBtn.classList.add('hidden');
-        selectedEventIds.clear();
-    }
-}
-
-// Load saved events on page load
-loadAllEvents();
-
-function loadAllEvents() {
+function loadUnsavedEvents() {
     fetch('{{ route("test-cases.events.get", [$project, $module, $testCase]) }}', {
         headers: {
             'Accept': 'application/json',
@@ -257,7 +222,7 @@ function loadAllEvents() {
     .then(r => r.json())
     .then(data => {
         if (data.success && data.events) {
-            displayAllEvents(data.events);
+            displayUnsavedEvents(data.events);
             updateCounts(data.total, data.saved, data.unsaved);
         }
     })
@@ -266,45 +231,34 @@ function loadAllEvents() {
     });
 }
 
-function displayAllEvents(events) {
-    const savedMonitor = document.getElementById('monitor-saved');
+function displayUnsavedEvents(events) {
     const unsavedMonitor = document.getElementById('monitor-unsaved');
 
-    // Clear both monitors
-    savedMonitor.innerHTML = '';
+    // Clear monitor
     unsavedMonitor.innerHTML = '';
 
-    // Filter events
-    const savedEvents = events.filter(e => e.is_saved);
+    // Filter only unsaved events
     const unsavedEvents = events.filter(e => !e.is_saved);
-
-    // Display saved events with DESC numbering (first event = highest number)
-    if (savedEvents.length === 0) {
-        savedMonitor.innerHTML = `
-            <div class="text-center py-12 text-gray-400">
-                <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
-                    <i class="fas fa-save text-white text-3xl"></i>
-                </div>
-                <p class="text-lg font-semibold text-gray-600 mb-2">No saved events yet</p>
-                <p class="text-sm">Capture events using the extension/bookmarklet, then click "Save Events"</p>
-            </div>
-        `;
-    } else {
-        savedEvents.forEach((event, index) => {
-            const eventNumber = savedEvents.length - index;
-            displayEvent(event, eventNumber, 'saved', false);
-        });
-    }
 
     // Display unsaved events with DESC numbering (first event = highest number)
     if (unsavedEvents.length === 0) {
         unsavedMonitor.innerHTML = `
-            <div class="text-center py-12 text-gray-400">
-                <div class="primary-color rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 opacity-20">
-                    <i class="fas fa-clock text-white text-3xl"></i>
+            <div class="text-center py-16 text-gray-400">
+                <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4 opacity-20">
+                    <i class="fas fa-clock text-white text-4xl"></i>
                 </div>
-                <p class="text-lg font-semibold text-gray-600 mb-2">No unsaved events yet</p>
-                <p class="text-sm">Use the extension/bookmarklet to capture events - they appear here in real-time</p>
+                <p class="text-xl font-semibold text-gray-700 mb-2">No Live Events Captured Yet</p>
+                <p class="text-sm text-gray-500 mb-4">Start the monitor and interact with your website to capture events in real-time</p>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto text-left text-sm text-gray-700">
+                    <p class="font-semibold text-blue-800 mb-2"><i class="fas fa-info-circle mr-1"></i> Quick Start:</p>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Click "Setup Instructions" for setup guide</li>
+                        <li>Click "Start Monitor" button above</li>
+                        <li>Use extension/bookmarklet to capture events</li>
+                        <li>Events appear here automatically</li>
+                        <li>Click "Save Events" when done</li>
+                    </ol>
+                </div>
             </div>
         `;
     } else {
@@ -313,14 +267,10 @@ function displayAllEvents(events) {
             displayEvent(event, eventNumber, 'unsaved', false);
         });
     }
-
-    // Update tab counts
-    document.getElementById('tab-saved-count').textContent = savedEvents.length;
-    document.getElementById('tab-unsaved-count').textContent = unsavedEvents.length;
 }
 
-function displayEvent(eventData, number = null, tabType = 'saved', scrollToBottom = true) {
-    const monitor = tabType === 'saved' ? document.getElementById('monitor-saved') : document.getElementById('monitor-unsaved');
+function displayEvent(eventData, number = null, tabType = 'unsaved', scrollToBottom = true) {
+    const monitor = document.getElementById('monitor-unsaved');
 
     // Remove placeholder if exists
     const placeholder = monitor.querySelector('.text-center');
@@ -329,32 +279,23 @@ function displayEvent(eventData, number = null, tabType = 'saved', scrollToBotto
     }
 
     const eventItem = document.createElement('div');
-    const bgColor = tabType === 'saved' ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' : 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200';
-    const badgeColor = tabType === 'saved' ? 'bg-green-600' : 'bg-orange-600';
-
-    eventItem.className = `${bgColor} border rounded-lg p-4 mb-3 transition hover:shadow-md`;
+    eventItem.className = 'bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4 mb-3 transition hover:shadow-md';
 
     const timestamp = new Date(eventData.created_at).toLocaleString();
-    const eventNumber = number ? `<span class="${badgeColor} text-white px-2 py-1 rounded text-xs font-bold mr-2">#${number}</span>` : '';
-
-    // Add checkbox only for saved events
-    const checkbox = tabType === 'saved' ?
-        `<input type="checkbox" class="event-checkbox w-4 h-4 cursor-pointer mr-2" data-event-id="${eventData.id}" onchange="updateSelectedCount()">`
-        : '';
+    const eventNumber = number ? `<span class="bg-orange-600 text-white px-2 py-1 rounded text-xs font-bold mr-2">#${number}</span>` : '';
 
     // Create user-friendly event title
     const eventTitle = formatEventTitle(eventData);
 
     eventItem.innerHTML = `
-        <div class="flex justify-between mb-2 items-center">
-            <div class="flex items-center">
-                ${checkbox}
+        <div class="flex justify-between mb-2 items-center flex-wrap gap-2">
+            <div class="flex items-center gap-2">
                 ${eventNumber}
                 <span class="font-bold text-blue-600 text-sm">${eventTitle}</span>
             </div>
             <span class="text-gray-500 text-xs">${timestamp}</span>
         </div>
-        <div class="border-l-2 border-blue-400 pl-3 text-xs text-gray-600 ${checkbox ? 'ml-6' : ''}">
+        <div class="border-l-4 border-orange-400 pl-3 text-xs text-gray-600">
             ${formatEventDetails(eventData)}
         </div>
     `;
@@ -449,155 +390,8 @@ function getLocationInfo(eventData, eventJson) {
         return `<strong style="color: #7c3aed;">${tagName.toUpperCase()}</strong> with test-id: <code>${eventJson.selectors.testId}</code>`;
     }
 
-function displayEvent(eventData, number = null, tabType = 'saved', scrollToBottom = true) {
-    const monitor = tabType === 'saved' ? document.getElementById('monitor-saved') : document.getElementById('monitor-unsaved');
-
-    // Remove placeholder if exists
-    const placeholder = monitor.querySelector('.text-center');
-    if (placeholder) {
-        monitor.innerHTML = '';
-    }
-
-    const eventItem = document.createElement('div');
-    const bgColor = tabType === 'saved' ? '#f0fdf4' : '#fef3c7';
-    const borderColor = tabType === 'saved' ? '#86efac' : '#fcd34d';
-    const badgeColor = tabType === 'saved' ? '#16a34a' : '#f59e0b';
-
-    eventItem.style.cssText = `background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 4px; padding: 12px; margin-bottom: 8px; position: relative;`;
-
-    const timestamp = new Date(eventData.created_at).toLocaleString();
-    const eventNumber = number ? `<span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-right: 8px;">#${number}</span>` : '';
-
-    // Add checkbox only for saved events
-    const checkbox = tabType === 'saved' ?
-        `<input type="checkbox" class="event-checkbox" data-event-id="${eventData.id}" onchange="updateSelectedCount()" style="width: 18px; height: 18px; cursor: pointer; margin-right: 8px;">`
-        : '';
-
-    // Create user-friendly event title
-    const eventTitle = formatEventTitle(eventData);
-
-    eventItem.innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center;">
-            <div style="display: flex; align-items: center;">
-                ${checkbox}
-                ${eventNumber}
-                <span style="font-weight: bold; color: #2563eb;">${eventTitle}</span>
-            </div>
-            <span style="color: #6b7280; font-size: 0.75rem;">${timestamp}</span>
-        </div>
-        <div style="border-left: 2px solid #3b82f6; padding-left: 12px; font-size: 0.75rem; color: #4b5563; ${checkbox ? 'margin-left: 26px;' : ''}">
-            ${formatEventDetails(eventData)}
-        </div>
-    `;
-
-    monitor.appendChild(eventItem);
-
-    if (scrollToBottom) {
-        monitor.scrollTop = monitor.scrollHeight;
-    }
-}
-
-function formatEventTitle(eventData) {
-    const eventType = eventData.event_type || 'unknown';
-
-    // Parse event_data JSON if available
-    let eventJson = null;
-    try {
-        eventJson = typeof eventData.event_data === 'string' ? JSON.parse(eventData.event_data) : eventData.event_data;
-    } catch(e) {}
-
-    // Get meaningful text content
-    const text = eventData.inner_text || eventJson?.innerText || '';
-    const value = eventData.value || eventJson?.value || '';
-    const tagName = eventData.tag_name || eventJson?.tagName || '';
-
-    // Create user-friendly titles based on event type and context
-    switch(eventType.toLowerCase()) {
-        case 'click':
-            // For clicks, show what was clicked
-            if (text && text.trim().length > 0) {
-                const displayText = text.substring(0, 40) + (text.length > 40 ? '...' : '');
-                return `🖱️ CLICK: "${displayText}"`;
-            }
-            if (eventJson?.ariaLabel) {
-                return `🖱️ CLICK: ${eventJson.ariaLabel}`;
-            }
-            if (eventJson?.alt) {
-                return `🖱️ CLICK: Image "${eventJson.alt}"`;
-            }
-            if (eventJson?.placeholder) {
-                return `🖱️ CLICK: ${eventJson.placeholder}`;
-            }
-            if (eventJson?.title) {
-                return `🖱️ CLICK: ${eventJson.title}`;
-            }
-            // Show tag and selector info if no text
-            if (eventJson?.selectors?.id) {
-                return `🖱️ CLICK: ${tagName.toUpperCase()} #${eventJson.selectors.id}`;
-            }
-            if (eventJson?.selectors?.name) {
-                return `🖱️ CLICK: ${tagName.toUpperCase()} [name="${eventJson.selectors.name}"]`;
-            }
-            if (eventJson?.selectors?.testId) {
-                return `🖱️ CLICK: ${tagName.toUpperCase()} [data-testid="${eventJson.selectors.testId}"]`;
-            }
-            return `🖱️ CLICK: ${tagName.toUpperCase()}`;
-
-        case 'input':
-            // For inputs, show field name and value
-            if (eventJson?.selectors?.name || eventJson?.selectors?.id) {
-                const fieldName = eventJson.selectors.name || eventJson.selectors.id;
-                if (value) {
-                    const displayValue = value.substring(0, 20) + (value.length > 20 ? '...' : '');
-                    return `⌨️ INPUT: ${fieldName} = "${displayValue}"`;
-                }
-                return `⌨️ INPUT: ${fieldName}`;
-            }
-            if (eventJson?.placeholder) {
-                return `⌨️ INPUT: ${eventJson.placeholder}`;
-            }
-            return `⌨️ INPUT: ${tagName.toUpperCase()}`;
-
-        case 'change':
-            // For change events (select, checkbox, radio)
-            if (eventJson?.selectedText) {
-                return `🔄 SELECT: "${eventJson.selectedText}"`;
-            }
-            if (eventJson?.checked !== undefined) {
-                const state = eventJson.checked ? 'Checked' : 'Unchecked';
-                const fieldName = eventJson?.selectors?.name || eventJson?.selectors?.id || tagName;
-                return `☑️ CHECKBOX: ${fieldName} (${state})`;
-            }
-            if (value) {
-                const displayValue = value.substring(0, 30) + (value.length > 30 ? '...' : '');
-                return `🔄 CHANGE: "${displayValue}"`;
-            }
-            return `🔄 CHANGE: ${tagName.toUpperCase()}`;
-
-        case 'file':
-            // For file uploads
-            if (eventJson?.fileNames && eventJson.fileNames.length > 0) {
-                const fileList = eventJson.fileNames.join(', ');
-                const displayFiles = fileList.substring(0, 40) + (fileList.length > 40 ? '...' : '');
-                return `📎 FILE UPLOAD: ${displayFiles}`;
-            }
-            return `📎 FILE UPLOAD`;
-
-        case 'submit':
-        case 'form_submit':
-            // For form submissions
-            if (eventJson?.selectors?.id) {
-                return `📤 SUBMIT FORM: #${eventJson.selectors.id}`;
-            }
-            if (eventJson?.action) {
-                const actionPath = eventJson.action.split('/').pop() || eventJson.action;
-                return `📤 SUBMIT: ${actionPath}`;
-            }
-            return `📤 SUBMIT FORM`;
-
-        default:
-            return `${eventType.toUpperCase()}`;
-    }
+    // Default return if no identifier found
+    return tagName ? `<strong>${tagName.toUpperCase()}</strong>` : null;
 }
 
 function formatEventDetails(eventData) {
@@ -735,7 +529,7 @@ function toggleCollapse(id) {
 
 function updateCounts(total, saved, unsaved) {
     document.getElementById('saved-count').textContent = saved;
-    document.getElementById('saved-count-display').textContent = saved;
+    document.getElementById('saved-count-badge').textContent = saved;
     document.getElementById('unsaved-count').textContent = unsaved;
 }
 
@@ -773,8 +567,8 @@ function startLiveCapture() {
         .then(r => r.json())
         .then(data => {
             if (data.success && data.events) {
-                // Reload all events to update the list
-                displayAllEvents(data.events);
+                // Reload unsaved events to update the list
+                displayUnsavedEvents(data.events);
                 updateCounts(data.total, data.saved, data.unsaved);
             }
         })
@@ -861,7 +655,7 @@ function saveAllEvents() {
                 ? `Saved ${data.saved} events (removed ${cleaned} redundant events)`
                 : `Saved ${data.saved} events`;
             showNotification('success', 'Events Saved', message);
-            loadAllEvents();
+            loadUnsavedEvents();
         }
     })
     .catch(error => {
@@ -895,7 +689,7 @@ function clearUnsavedEvents() {
     .then(data => {
         if (data.success) {
             showNotification('success', 'Events Cleared', `Cleared ${data.deleted} unsaved event(s)`);
-            loadAllEvents();
+            loadUnsavedEvents();
         }
     })
     .catch(error => {
