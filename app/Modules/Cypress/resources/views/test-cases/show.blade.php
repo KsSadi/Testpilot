@@ -46,7 +46,12 @@
             </div>
             <div>
                 <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Session ID</p>
-                <p style="font-family: monospace; font-weight: 600; color: #1f2937; font-size: 0.875rem;">{{ $testCase->session_id }}</p>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <p id="session-id-text" style="font-family: monospace; font-weight: 600; color: #1f2937; font-size: 0.875rem; margin: 0;">{{ $testCase->session_id }}</p>
+                    <button onclick="copySessionId()" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px;" title="Copy Session ID">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
             </div>
             <div>
                 <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Events Saved</p>
@@ -67,11 +72,8 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin: 0;">Event Capture</h2>
             <div style="display: flex; gap: 8px;">
-                <a href="{{ route('test-cases.capture-instructions', [$project, $module, $testCase]) }}" target="_blank" style="padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.875rem;">
-                    <i class="fas fa-info-circle"></i> Setup Instructions
-                </a>
                 <button id="live-capture-btn" onclick="toggleLiveCapture()" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
-                    <i class="fas fa-play"></i> Start Live Capture
+                    <i class="fas fa-play"></i> Start Live Event Monitor
                 </button>
                 <button onclick="saveAllEvents()" style="padding: 8px 16px; background: #7c3aed; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
                     <i class="fas fa-save"></i> Save Events
@@ -747,7 +749,7 @@ function startLiveCapture() {
     }
 
     const btn = document.getElementById('live-capture-btn');
-    btn.innerHTML = '<i class="fas fa-stop"></i> Stop Live Capture';
+    btn.innerHTML = '<i class="fas fa-stop"></i> Stop Event Monitor';
     btn.style.background = '#dc2626';
 
     document.getElementById('live-status').textContent = 'Active';
@@ -771,7 +773,7 @@ function startLiveCapture() {
         .catch(error => console.error('Error:', error));
     }, 1000);
 
-    showNotification('success', 'Live Capture Started', 'Events will update automatically every second.');
+    showNotification('success', 'Event Monitor Started', 'Events will update automatically every second.');
 }
 
 function stopLiveCapture() {
@@ -780,14 +782,32 @@ function stopLiveCapture() {
         pollingInterval = null;
 
         const btn = document.getElementById('live-capture-btn');
-        btn.innerHTML = '<i class="fas fa-play"></i> Start Live Capture';
+        btn.innerHTML = '<i class="fas fa-play"></i> Start Live Event Monitor';
         btn.style.background = '#16a34a';
 
         document.getElementById('live-status').textContent = 'Stopped';
         document.getElementById('live-status').style.color = '#6b7280';
 
-        showNotification('info', 'Live Capture Stopped', 'Event monitoring has been paused.');
+        showNotification('info', 'Event Monitor Stopped', 'Event monitoring has been paused.');
     }
+}
+
+// Copy Session ID function
+function copySessionId() {
+    const sessionId = '{{ $testCase->session_id }}';
+    navigator.clipboard.writeText(sessionId).then(() => {
+        showNotification('success', 'Copied!', 'Session ID copied to clipboard');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = sessionId;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('success', 'Copied!', 'Session ID copied to clipboard');
+    });
 }
 
 function saveAllEvents() {
@@ -797,6 +817,21 @@ function saveAllEvents() {
         showNotification('info', 'No Unsaved Events', 'There are no unsaved events to save.');
         return;
     }
+
+    // Show cleanup confirmation
+    const confirmMsg = `💡 Smart Save with Event Cleanup\n\n` +
+                      `This will:\n` +
+                      `✓ Merge sequential typing in same field (keep final value only)\n` +
+                      `✓ Remove clicks on blank/non-interactive areas\n` +
+                      `✓ Keep all important events (buttons, links, forms, etc.)\n\n` +
+                      `Total unsaved events: ${unsavedCount}\n\n` +
+                      `Continue with smart cleanup?`;
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    showNotification('info', 'Processing...', 'Cleaning up and saving events...');
 
     fetch('{{ route("test-cases.events.save", [$project, $module, $testCase]) }}', {
         method: 'POST',
@@ -809,7 +844,11 @@ function saveAllEvents() {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            showNotification('success', 'Events Saved', `Successfully saved ${data.saved} event(s)`);
+            const cleaned = data.cleaned || 0;
+            const message = cleaned > 0 
+                ? `Saved ${data.saved} events (removed ${cleaned} redundant events)`
+                : `Saved ${data.saved} events`;
+            showNotification('success', 'Events Saved', message);
             loadAllEvents();
         }
     })
@@ -936,6 +975,26 @@ function deleteSelectedEvents() {
 window.addEventListener('beforeunload', () => {
     stopLiveCapture();
 });
+
+// Console diagnostic on page load
+console.log('═══════════════════════════════════════════════════════════');
+console.log('🎯 TESTPILOT EVENT CAPTURE DIAGNOSTIC');
+console.log('═══════════════════════════════════════════════════════════');
+console.log('✅ Expected Session ID:', '{{ $testCase->session_id }}');
+console.log('📊 Current Events Count:', {{ $testCase->events()->count() }});
+console.log('');
+console.log('🔍 TROUBLESHOOTING STEPS:');
+console.log('1. Click "Setup Instructions" button above');
+console.log('2. For Chrome Extension: Configure it with the Session ID shown above');
+console.log('3. For Bookmarklet: Drag the bookmarklet from instructions page');
+console.log('4. Open the target website in a NEW TAB');
+console.log('5. Click the bookmarklet OR let extension auto-inject');
+console.log('6. Perform actions on the website');
+console.log('7. Come back here and click "Start Live Capture" to see events');
+console.log('');
+console.log('💡 TIP: Open Browser Console (F12) on the target website');
+console.log('   You should see: "🚀 Testpilot Started!" and "📋 Session: {{ $testCase->session_id }}"');
+console.log('═══════════════════════════════════════════════════════════');
 </script>
 @endpush
 

@@ -194,13 +194,123 @@ class TestCaseController extends Controller
      */
     public function saveEvents(Project $project, Module $module, TestCase $testCase)
     {
-        $updated = $testCase->unsavedEvents()->update(['is_saved' => true]);
+        // Get all unsaved events ordered by creation time
+        $unsavedEvents = $testCase->unsavedEvents()->orderBy('created_at', 'asc')->get();
+        $originalCount = $unsavedEvents->count();
+        
+        // Clean up events before saving
+        $cleanedEvents = $this->cleanupEvents($unsavedEvents);
+        
+        // Delete events that were removed during cleanup
+        $eventsToDelete = $unsavedEvents->pluck('id')->diff($cleanedEvents->pluck('id'));
+        if ($eventsToDelete->count() > 0) {
+            TestCaseEvent::whereIn('id', $eventsToDelete)->delete();
+        }
+        
+        // Mark remaining events as saved
+        $updated = TestCaseEvent::whereIn('id', $cleanedEvents->pluck('id'))
+            ->update(['is_saved' => true]);
+        
+        $cleanedCount = $originalCount - $updated;
 
         return response()->json([
             'success' => true,
-            'message' => "Saved $updated events",
-            'saved' => $updated
+            'message' => "Saved $updated events" . ($cleanedCount > 0 ? " (removed $cleanedCount redundant events)" : ""),
+            'saved' => $updated,
+            'cleaned' => $cleanedCount
         ]);
+    }
+    
+    /**
+     * Clean up redundant events
+     */
+    private function cleanupEvents($events)
+    {
+        $cleaned = collect();
+        $inputFieldBuffer = []; // Buffer to track sequential input events
+        
+        foreach ($events as $event) {
+            $eventType = $event->event_type;
+            $eventData = json_decode($event->event_data, true);
+            
+            // 1. Handle INPUT events - merge sequential typing on same field
+            if ($eventType === 'input') {
+                $selector = $eventData['cypressSelector'] ?? $event->selector;
+                
+                // Check if there's already an input event for this field in buffer
+                $existingKey = null;
+                foreach ($inputFieldBuffer as $key => $bufferedEvent) {
+                    $bufferedData = json_decode($bufferedEvent->event_data, true);
+                    $bufferedSelector = $bufferedData['cypressSelector'] ?? $bufferedEvent->selector;
+                    
+                    if ($bufferedSelector === $selector) {
+                        $existingKey = $key;
+                        break;
+                    }
+                }
+                
+                if ($existingKey !== null) {
+                    // Replace old input event with new one (keeps final value)
+                    $inputFieldBuffer[$existingKey] = $event;
+                } else {
+                    // Add new input event to buffer
+                    $inputFieldBuffer[] = $event;
+                }
+                continue;
+            }
+            
+            // Flush input buffer when we encounter non-input event
+            if (!empty($inputFieldBuffer)) {
+                foreach ($inputFieldBuffer as $bufferedEvent) {
+                    $cleaned->push($bufferedEvent);
+                }
+                $inputFieldBuffer = [];
+            }
+            
+            // 2. Handle CLICK events - remove clicks on non-interactive elements
+            if ($eventType === 'click') {
+                $tagName = strtoupper($event->tag_name ?? '');
+                $isInteractive = false;
+                
+                // Check if element is interactive
+                $interactiveTags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+                if (in_array($tagName, $interactiveTags)) {
+                    $isInteractive = true;
+                }
+                
+                // Check for interactive attributes/classes
+                if (!$isInteractive && $eventData) {
+                    $hasRole = isset($eventData['role']) && in_array($eventData['role'], ['button', 'link', 'tab', 'menuitem']);
+                    $hasOnClick = isset($eventData['onclick']) || (isset($eventData['attributes']) && isset($eventData['attributes']['onclick']));
+                    $hasButtonClass = false;
+                    
+                    if (isset($eventData['selectors']['className'])) {
+                        $classes = $eventData['selectors']['className'];
+                        $hasButtonClass = preg_match('/\b(btn|button|link|clickable)\b/i', $classes);
+                    }
+                    
+                    $isInteractive = $hasRole || $hasOnClick || $hasButtonClass;
+                }
+                
+                // Skip clicks on non-interactive elements like BODY, DIV, SPAN without handlers
+                $ignoreTags = ['BODY', 'HTML'];
+                if (in_array($tagName, $ignoreTags) || (!$isInteractive && in_array($tagName, ['DIV', 'SPAN', 'P', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'NAV']))) {
+                    continue; // Skip this useless click
+                }
+            }
+            
+            // 3. Keep all other events (checkbox, radio, select, file, submit, etc.)
+            $cleaned->push($event);
+        }
+        
+        // Flush any remaining input events in buffer
+        if (!empty($inputFieldBuffer)) {
+            foreach ($inputFieldBuffer as $bufferedEvent) {
+                $cleaned->push($bufferedEvent);
+            }
+        }
+        
+        return $cleaned;
     }
 
     /**

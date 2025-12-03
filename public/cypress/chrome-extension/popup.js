@@ -101,19 +101,29 @@ document.addEventListener('DOMContentLoaded', () => {
       isPaused: false,
       eventCount: 0
     }, () => {
+      console.log('✅ Configuration saved to chrome.storage.local');
+      console.log('Server URL:', serverUrl);
+      console.log('Session ID:', sessionId);
+      console.log('isEnabled: true');
+      
       // Notify background to reset count
       chrome.runtime.sendMessage({ action: 'resetEventCount' });
       
       showActiveView(serverUrl, sessionId);
-      showNotification('✅ Started', 'Event capture is now active!');
+      showNotification('✅ Started', 'Event capture is now active! Reloading all tabs...');
       
       // Reload all tabs to inject script
       chrome.tabs.query({}, (tabs) => {
+        console.log('🔄 Reloading', tabs.length, 'tabs...');
+        let reloadedCount = 0;
         tabs.forEach((tab) => {
           if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+            console.log('🔄 Reloading tab:', tab.url);
             chrome.tabs.reload(tab.id);
+            reloadedCount++;
           }
         });
+        console.log('✅ Reloaded', reloadedCount, 'tabs');
       });
     });
   });

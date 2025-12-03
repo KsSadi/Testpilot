@@ -17,27 +17,37 @@
   });
 
   // Get configuration from extension storage
+  console.log('🔍 Content script: Requesting config...');
   chrome.runtime.sendMessage({ action: 'getConfig' }, (config) => {
+    console.log('📦 Content script: Received config:', config);
+    
     if (!config || !config.isEnabled) {
-      console.log('Testpilot Event Capture: Disabled');
+      console.log('⏹ Testpilot Event Capture: Disabled (isEnabled:', config?.isEnabled, ')');
       return;
     }
 
     const { serverUrl, sessionId, isPaused } = config;
 
     if (!sessionId) {
-      console.warn('Testpilot Event Capture: No session ID configured');
+      console.warn('⚠️ Testpilot Event Capture: No session ID configured');
       return;
     }
+    
+    console.log('✅ Config validated - proceeding with injection');
 
     // Don't inject on the Testpilot dashboard itself
-    if (window.location.href.includes(serverUrl)) {
-      console.log('Testpilot: Skipping injection on dashboard');
+    const currentUrl = window.location.href;
+    console.log('🌐 Current URL:', currentUrl);
+    console.log('🏠 Server URL:', serverUrl);
+    
+    if (currentUrl.includes(serverUrl.replace('http://', '').replace('https://', ''))) {
+      console.log('⏭ Testpilot: Skipping injection on dashboard');
       return;
     }
 
-    console.log('🎯 Testpilot Event Capture: Injecting on', window.location.href);
-    console.log('📋 Using Test Case Session ID:', sessionId);
+    console.log('🎯 Testpilot Event Capture: Starting injection...');
+    console.log('📋 Session ID:', sessionId);
+    console.log('🖥 Server URL:', serverUrl);
 
     // Set the correct session from extension
     localStorage.setItem('cypress_session_id', sessionId);
@@ -54,16 +64,28 @@
     console.log('✅ localStorage updated with Test Case session:', sessionId);
 
     // Inject the capture script with session ID in URL (this takes priority)
+    const scriptUrl = serverUrl + '/cypress/capture-script.js?session=' + encodeURIComponent(sessionId) + '&t=' + Date.now();
+    console.log('📜 Script URL:', scriptUrl);
+    
     const script = document.createElement('script');
-    script.src = serverUrl + '/cypress/capture-script.js?session=' + encodeURIComponent(sessionId) + '&t=' + Date.now();
-    script.onerror = () => {
-      console.error('Testpilot Event Capture: Failed to load capture script. Is the server running at ' + serverUrl + '?');
+    script.src = scriptUrl;
+    script.onerror = (e) => {
+      console.error('❌ Testpilot Event Capture: Failed to load capture script!');
+      console.error('URL:', scriptUrl);
+      console.error('Error:', e);
+      console.error('Is the server running at ' + serverUrl + '?');
+      console.error('Try opening this URL in browser:', scriptUrl);
     };
     script.onload = () => {
-      console.log('✅ Testpilot capture script loaded with Test Case session:', sessionId);
+      console.log('✅ Testpilot capture script loaded successfully!');
+      console.log('📋 Session:', sessionId);
+      console.log('🎬 Waiting for user interactions...');
     };
 
-    (document.head || document.documentElement).appendChild(script);
+    const target = document.head || document.documentElement;
+    console.log('📌 Injecting script into:', target.tagName);
+    target.appendChild(script);
+    console.log('✅ Script element added to DOM');
   });
 
   // Listen for pause state updates from popup
