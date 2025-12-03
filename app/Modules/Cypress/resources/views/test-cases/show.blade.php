@@ -14,7 +14,12 @@
             <p style="color: #6b7280;">Test Case #{{ $testCase->order }} - {{ $project->name }}</p>
         </div>
         <div style="display: flex; gap: 12px;">
-            <a href="{{ route('test-cases.edit', [$project, $testCase]) }}" style="padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+            <a href="{{ route('test-cases.generate-cypress', [$project, $module, $testCase]) }}" 
+               id="generate-cypress-btn"
+               style="padding: 10px 20px; background: #10b981; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-code"></i> Generate Cypress Code
+            </a>
+            <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" style="padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
                 <i class="fas fa-edit"></i> Edit
             </a>
             <a href="{{ route('projects.show', $project) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
@@ -62,7 +67,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin: 0;">Event Capture</h2>
             <div style="display: flex; gap: 8px;">
-                <a href="{{ route('test-cases.capture-instructions', [$project, $testCase]) }}" target="_blank" style="padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.875rem;">
+                <a href="{{ route('test-cases.capture-instructions', [$project, $module, $testCase]) }}" target="_blank" style="padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 0.875rem;">
                     <i class="fas fa-info-circle"></i> Setup Instructions
                 </a>
                 <button id="live-capture-btn" onclick="toggleLiveCapture()" style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 0.875rem;">
@@ -270,14 +275,14 @@ function showNotification(type, title, message) {
     const container = document.getElementById('notification-container');
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    
+
     const icons = {
         success: '✓',
         error: '✕',
         warning: '⚠',
         info: 'ℹ'
     };
-    
+
     notification.innerHTML = `
         <div class="notification-icon">${icons[type]}</div>
         <div class="notification-content">
@@ -286,9 +291,9 @@ function showNotification(type, title, message) {
         </div>
         <button class="notification-close" onclick="this.parentElement.remove()">×</button>
     `;
-    
+
     container.appendChild(notification);
-    
+
     // Auto remove after 5 seconds
     setTimeout(() => {
         if (notification.parentElement) {
@@ -306,7 +311,7 @@ function switchTab(tab) {
     const unsavedMonitor = document.getElementById('monitor-unsaved');
     const savedActions = document.getElementById('saved-actions');
     const deleteBtn = document.getElementById('delete-selected-btn');
-    
+
     if (tab === 'saved') {
         savedTab.style.background = '#16a34a';
         savedTab.style.color = 'white';
@@ -332,7 +337,7 @@ function switchTab(tab) {
 loadAllEvents();
 
 function loadAllEvents() {
-    fetch('{{ route("test-cases.events.get", [$project, $testCase]) }}', {
+    fetch('{{ route("test-cases.events.get", [$project, $module, $testCase]) }}', {
         headers: {
             'Accept': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -353,52 +358,52 @@ function loadAllEvents() {
 // Helper function to get user-friendly location info
 function getLocationInfo(eventData, eventJson) {
     const tagName = eventData.tag_name || eventJson?.tagName || '';
-    
+
     // Prioritize meaningful identifiers
     if (eventJson?.selectors?.id) {
         return `<strong style="color: #059669;">${tagName.toUpperCase()}</strong> with ID: <code>#${eventJson.selectors.id}</code>`;
     }
-    
+
     if (eventJson?.selectors?.name) {
         return `<strong style="color: #0891b2;">${tagName.toUpperCase()}</strong> named: <code>${eventJson.selectors.name}</code>`;
     }
-    
+
     if (eventJson?.selectors?.testId) {
         return `<strong style="color: #7c3aed;">${tagName.toUpperCase()}</strong> with test-id: <code>${eventJson.selectors.testId}</code>`;
     }
-    
+
     if (eventJson?.ariaLabel) {
         return `<strong style="color: #dc2626;">${tagName.toUpperCase()}</strong> labeled: <code>${eventJson.ariaLabel}</code>`;
     }
-    
+
     if (eventJson?.placeholder) {
         return `<strong style="color: #ea580c;">${tagName.toUpperCase()}</strong> placeholder: <code>${eventJson.placeholder}</code>`;
     }
-    
+
     if (eventJson?.selectors?.className) {
         const firstClass = eventJson.selectors.className.split(' ')[0];
         return `<strong style="color: #8b5cf6;">${tagName.toUpperCase()}</strong> with class: <code>.${firstClass}</code>`;
     }
-    
+
     if (tagName) {
         return `<strong style="color: #6366f1;">${tagName.toUpperCase()}</strong> element`;
     }
-    
+
     return null;
 }
 
 function displayAllEvents(events) {
     const savedMonitor = document.getElementById('monitor-saved');
     const unsavedMonitor = document.getElementById('monitor-unsaved');
-    
+
     // Clear both monitors
     savedMonitor.innerHTML = '';
     unsavedMonitor.innerHTML = '';
-    
+
     // Filter events - NO reverse, keep original order (oldest first)
     const savedEvents = events.filter(e => e.is_saved);
     const unsavedEvents = events.filter(e => !e.is_saved);
-    
+
     // Display saved events with DESC numbering (first event = highest number)
     if (savedEvents.length === 0) {
         savedMonitor.innerHTML = `
@@ -415,7 +420,7 @@ function displayAllEvents(events) {
             displayEvent(event, eventNumber, 'saved', false);
         });
     }
-    
+
     // Display unsaved events with DESC numbering (first event = highest number)
     if (unsavedEvents.length === 0) {
         unsavedMonitor.innerHTML = `
@@ -432,7 +437,7 @@ function displayAllEvents(events) {
             displayEvent(event, eventNumber, 'unsaved', false);
         });
     }
-    
+
     // Update tab counts
     document.getElementById('tab-saved-count').textContent = savedEvents.length;
     document.getElementById('tab-unsaved-count').textContent = unsavedEvents.length;
@@ -440,31 +445,31 @@ function displayAllEvents(events) {
 
 function displayEvent(eventData, number = null, tabType = 'saved', scrollToBottom = true) {
     const monitor = tabType === 'saved' ? document.getElementById('monitor-saved') : document.getElementById('monitor-unsaved');
-    
+
     // Remove placeholder if exists
     const placeholder = monitor.querySelector('.text-center');
     if (placeholder) {
         monitor.innerHTML = '';
     }
-    
+
     const eventItem = document.createElement('div');
     const bgColor = tabType === 'saved' ? '#f0fdf4' : '#fef3c7';
     const borderColor = tabType === 'saved' ? '#86efac' : '#fcd34d';
     const badgeColor = tabType === 'saved' ? '#16a34a' : '#f59e0b';
-    
+
     eventItem.style.cssText = `background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 4px; padding: 12px; margin-bottom: 8px; position: relative;`;
-    
+
     const timestamp = new Date(eventData.created_at).toLocaleString();
     const eventNumber = number ? `<span style="background: ${badgeColor}; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-right: 8px;">#${number}</span>` : '';
-    
+
     // Add checkbox only for saved events
-    const checkbox = tabType === 'saved' ? 
-        `<input type="checkbox" class="event-checkbox" data-event-id="${eventData.id}" onchange="updateSelectedCount()" style="width: 18px; height: 18px; cursor: pointer; margin-right: 8px;">` 
+    const checkbox = tabType === 'saved' ?
+        `<input type="checkbox" class="event-checkbox" data-event-id="${eventData.id}" onchange="updateSelectedCount()" style="width: 18px; height: 18px; cursor: pointer; margin-right: 8px;">`
         : '';
-    
+
     // Create user-friendly event title
     const eventTitle = formatEventTitle(eventData);
-    
+
     eventItem.innerHTML = `
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center;">
             <div style="display: flex; align-items: center;">
@@ -478,9 +483,9 @@ function displayEvent(eventData, number = null, tabType = 'saved', scrollToBotto
             ${formatEventDetails(eventData)}
         </div>
     `;
-    
+
     monitor.appendChild(eventItem);
-    
+
     if (scrollToBottom) {
         monitor.scrollTop = monitor.scrollHeight;
     }
@@ -488,18 +493,18 @@ function displayEvent(eventData, number = null, tabType = 'saved', scrollToBotto
 
 function formatEventTitle(eventData) {
     const eventType = eventData.event_type || 'unknown';
-    
+
     // Parse event_data JSON if available
     let eventJson = null;
     try {
         eventJson = typeof eventData.event_data === 'string' ? JSON.parse(eventData.event_data) : eventData.event_data;
     } catch(e) {}
-    
+
     // Get meaningful text content
     const text = eventData.inner_text || eventJson?.innerText || '';
     const value = eventData.value || eventJson?.value || '';
     const tagName = eventData.tag_name || eventJson?.tagName || '';
-    
+
     // Create user-friendly titles based on event type and context
     switch(eventType.toLowerCase()) {
         case 'click':
@@ -531,7 +536,7 @@ function formatEventTitle(eventData) {
                 return `🖱️ CLICK: ${tagName.toUpperCase()} [data-testid="${eventJson.selectors.testId}"]`;
             }
             return `🖱️ CLICK: ${tagName.toUpperCase()}`;
-            
+
         case 'input':
             // For inputs, show field name and value
             if (eventJson?.selectors?.name || eventJson?.selectors?.id) {
@@ -546,7 +551,7 @@ function formatEventTitle(eventData) {
                 return `⌨️ INPUT: ${eventJson.placeholder}`;
             }
             return `⌨️ INPUT: ${tagName.toUpperCase()}`;
-            
+
         case 'change':
             // For change events (select, checkbox, radio)
             if (eventJson?.selectedText) {
@@ -562,7 +567,7 @@ function formatEventTitle(eventData) {
                 return `🔄 CHANGE: "${displayValue}"`;
             }
             return `🔄 CHANGE: ${tagName.toUpperCase()}`;
-            
+
         case 'file':
             // For file uploads
             if (eventJson?.fileNames && eventJson.fileNames.length > 0) {
@@ -571,7 +576,7 @@ function formatEventTitle(eventData) {
                 return `📎 FILE UPLOAD: ${displayFiles}`;
             }
             return `📎 FILE UPLOAD`;
-            
+
         case 'submit':
         case 'form_submit':
             // For form submissions
@@ -583,7 +588,7 @@ function formatEventTitle(eventData) {
                 return `📤 SUBMIT: ${actionPath}`;
             }
             return `📤 SUBMIT FORM`;
-            
+
         default:
             return `${eventType.toUpperCase()}`;
     }
@@ -591,52 +596,52 @@ function formatEventTitle(eventData) {
 
 function formatEventDetails(eventData) {
     let details = [];
-    
+
     // Parse event_data JSON if available
     let eventJson = null;
     try {
         eventJson = typeof eventData.event_data === 'string' ? JSON.parse(eventData.event_data) : eventData.event_data;
     } catch(e) {}
-    
+
     // Show user-friendly location info first
     const locationInfo = getLocationInfo(eventData, eventJson);
     if (locationInfo) {
         details.push(`<strong>📍 Location:</strong> ${locationInfo}`);
     }
-    
+
     // Show value/text if relevant
     if (eventData.value && eventData.event_type !== 'click') {
         const displayValue = eventData.value.substring(0, 60) + (eventData.value.length > 60 ? '...' : '');
         details.push(`<strong>💬 Content:</strong> <code style="background: #e0f2fe; padding: 2px 6px; border-radius: 3px;">${displayValue}</code>`);
     }
-    
+
     // Show selected option for dropdowns
     if (eventJson?.selectedText) {
         details.push(`<strong>✅ Selected:</strong> ${eventJson.selectedText}`);
     }
-    
+
     // Show checkbox state
     if (eventJson?.checked !== undefined && eventJson.checked !== null) {
         const state = eventJson.checked ? '✅ Checked' : '⬜ Unchecked';
         details.push(`<strong>State:</strong> ${state}`);
     }
-    
+
     // Show file upload info
     if (eventJson?.fileNames && eventJson.fileNames.length > 0) {
         details.push(`<strong>📁 Files:</strong> ${eventJson.fileNames.join(', ')}`);
     }
-    
+
     // Show technical selector (collapsed by default)
     if (eventJson?.cypressSelector || eventData.selector) {
         const selector = eventJson?.cypressSelector || eventData.selector;
         details.push(`<strong>🎯 Selector:</strong> <code style="background: #1f2937; color: #10b981; padding: 2px 6px; border-radius: 3px; font-size: 0.65rem;">${selector}</code>`);
     }
-    
+
     // Collapsible section for all details
     const collapseId = 'collapse-' + (eventData.id || Math.random().toString(36));
-    
+
     let allDetails = [];
-    
+
     // All Selector Options (for code generation)
     if (eventJson?.selectors) {
         allDetails.push(`<div style="margin-top: 8px; padding: 8px; background: #f3f4f6; border-radius: 4px;">
@@ -649,7 +654,7 @@ function formatEventDetails(eventData) {
             ${eventJson.selectors.xpath ? `<span style="color: #6366f1;">• XPath:</span> <code style="font-size: 0.7rem;">${eventJson.selectors.xpath}</code><br>` : ''}
         </div>`);
     }
-    
+
     // File Upload Info
     if (eventJson?.fileNames && eventJson.fileNames.length > 0) {
         allDetails.push(`<div style="margin-top: 8px; padding: 8px; background: #fef3c7; border-radius: 4px;">
@@ -659,7 +664,7 @@ function formatEventDetails(eventData) {
             <span style="color: #78350f;">• Count:</span> ${eventJson.fileCount}
         </div>`);
     }
-    
+
     // Select/Dropdown Info
     if (eventJson?.selectedText || eventJson?.selectedValue) {
         allDetails.push(`<div style="margin-top: 8px; padding: 8px; background: #dbeafe; border-radius: 4px;">
@@ -669,7 +674,7 @@ function formatEventDetails(eventData) {
             ${eventJson.selectedIndex !== undefined ? `<span style="color: #1e3a8a;">• Index:</span> ${eventJson.selectedIndex}` : ''}
         </div>`);
     }
-    
+
     // Checkbox/Radio Info
     if (eventJson?.checked !== undefined && eventJson.checked !== null) {
         const checkedState = eventJson.checked ? '✅ Checked' : '⬜ Unchecked';
@@ -677,7 +682,7 @@ function formatEventDetails(eventData) {
             <strong style="color: #166534;">☑️ State:</strong> ${checkedState}
         </div>`);
     }
-    
+
     // Link/Form Info
     if (eventJson?.href || eventJson?.action) {
         allDetails.push(`<div style="margin-top: 8px; padding: 8px; background: #fce7f3; border-radius: 4px;">
@@ -686,7 +691,7 @@ function formatEventDetails(eventData) {
             ${eventJson.method ? `<strong style="color: #9f1239;">📮 Method:</strong> ${eventJson.method}` : ''}
         </div>`);
     }
-    
+
     // URL Info
     if (eventData.url) {
         allDetails.push(`<div style="margin-top: 8px; padding: 8px; background: #f1f5f9; border-radius: 4px;">
@@ -694,7 +699,7 @@ function formatEventDetails(eventData) {
             <code style="font-size: 0.7rem; word-break: break-all;">${eventData.url}</code>
         </div>`);
     }
-    
+
     const collapsibleContent = allDetails.length > 0 ? `
         <div style="margin-top: 8px;">
             <button onclick="toggleCollapse('${collapseId}')" style="background: #3b82f6; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600;">
@@ -705,7 +710,7 @@ function formatEventDetails(eventData) {
             </div>
         </div>
     ` : '';
-    
+
     return details.join('<br>') + collapsibleContent;
 }
 
@@ -740,16 +745,16 @@ function startLiveCapture() {
     if (pollingInterval) {
         return; // Already running
     }
-    
+
     const btn = document.getElementById('live-capture-btn');
     btn.innerHTML = '<i class="fas fa-stop"></i> Stop Live Capture';
     btn.style.background = '#dc2626';
-    
+
     document.getElementById('live-status').textContent = 'Active';
     document.getElementById('live-status').style.color = '#16a34a';
-    
+
     pollingInterval = setInterval(() => {
-        fetch('{{ route("test-cases.events.get", [$project, $testCase]) }}', {
+        fetch('{{ route("test-cases.events.get", [$project, $module, $testCase]) }}', {
             headers: {
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
@@ -765,7 +770,7 @@ function startLiveCapture() {
         })
         .catch(error => console.error('Error:', error));
     }, 1000);
-    
+
     showNotification('success', 'Live Capture Started', 'Events will update automatically every second.');
 }
 
@@ -773,27 +778,27 @@ function stopLiveCapture() {
     if (pollingInterval) {
         clearInterval(pollingInterval);
         pollingInterval = null;
-        
+
         const btn = document.getElementById('live-capture-btn');
         btn.innerHTML = '<i class="fas fa-play"></i> Start Live Capture';
         btn.style.background = '#16a34a';
-        
+
         document.getElementById('live-status').textContent = 'Stopped';
         document.getElementById('live-status').style.color = '#6b7280';
-        
+
         showNotification('info', 'Live Capture Stopped', 'Event monitoring has been paused.');
     }
 }
 
 function saveAllEvents() {
     const unsavedCount = parseInt(document.getElementById('unsaved-count').textContent);
-    
+
     if (unsavedCount === 0) {
         showNotification('info', 'No Unsaved Events', 'There are no unsaved events to save.');
         return;
     }
-    
-    fetch('{{ route("test-cases.events.save", [$project, $testCase]) }}', {
+
+    fetch('{{ route("test-cases.events.save", [$project, $module, $testCase]) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -816,18 +821,18 @@ function saveAllEvents() {
 
 function clearUnsavedEvents() {
     const unsavedCount = parseInt(document.getElementById('unsaved-count').textContent);
-    
+
     if (unsavedCount === 0) {
         showNotification('info', 'Nothing to Clear', 'There are no unsaved events to clear.');
         return;
     }
-    
+
     // Show confirmation dialog with custom style
     if (!confirm(`⚠️ Clear ${unsavedCount} unsaved event(s)?\n\nThis action cannot be undone.\nSaved events will NOT be deleted.`)) {
         return;
     }
-    
-    fetch('{{ route("test-cases.events.clear", [$project, $testCase]) }}', {
+
+    fetch('{{ route("test-cases.events.clear", [$project, $module, $testCase]) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -852,7 +857,7 @@ function clearUnsavedEvents() {
 function toggleSelectAll() {
     const selectAllCheckbox = document.getElementById('select-all-saved');
     const checkboxes = document.querySelectorAll('.event-checkbox');
-    
+
     checkboxes.forEach(checkbox => {
         checkbox.checked = selectAllCheckbox.checked;
         if (selectAllCheckbox.checked) {
@@ -861,7 +866,7 @@ function toggleSelectAll() {
             selectedEventIds.delete(parseInt(checkbox.dataset.eventId));
         }
     });
-    
+
     updateSelectedCount();
 }
 
@@ -869,21 +874,21 @@ function toggleSelectAll() {
 function updateSelectedCount() {
     selectedEventIds.clear();
     const checkboxes = document.querySelectorAll('.event-checkbox:checked');
-    
+
     checkboxes.forEach(checkbox => {
         selectedEventIds.add(parseInt(checkbox.dataset.eventId));
     });
-    
+
     const deleteBtn = document.getElementById('delete-selected-btn');
     const selectedCountSpan = document.getElementById('selected-count');
-    
+
     if (selectedEventIds.size > 0) {
         deleteBtn.style.display = 'inline-block';
         selectedCountSpan.textContent = selectedEventIds.size;
     } else {
         deleteBtn.style.display = 'none';
     }
-    
+
     // Update select all checkbox state
     const selectAllCheckbox = document.getElementById('select-all-saved');
     const allCheckboxes = document.querySelectorAll('.event-checkbox');
@@ -896,12 +901,12 @@ function deleteSelectedEvents() {
         showNotification('info', 'No Selection', 'Please select events to delete.');
         return;
     }
-    
+
     if (!confirm(`⚠️ Delete ${selectedEventIds.size} selected event(s)?\n\nThis action cannot be undone.`)) {
         return;
     }
-    
-    fetch('{{ route("test-cases.events.delete", [$project, $testCase]) }}', {
+
+    fetch('{{ route("test-cases.events.delete", [$project, $module, $testCase]) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

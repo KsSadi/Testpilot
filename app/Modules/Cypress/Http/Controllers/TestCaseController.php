@@ -4,6 +4,7 @@ namespace App\Modules\Cypress\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Cypress\Models\Project;
+use App\Modules\Cypress\Models\Module;
 use App\Modules\Cypress\Models\TestCase;
 use App\Modules\Cypress\Models\TestCaseEvent;
 use Illuminate\Http\Request;
@@ -13,19 +14,21 @@ class TestCaseController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Project $project)
+    public function index(Project $project, Module $module)
     {
-        $testCases = $project->testCases()->orderBy('order')->get();
+        $testCases = $module->testCases()->orderBy('order')->get();
 
         $data = [
-            'pageTitle' => 'Test Cases - ' . $project->name,
+            'pageTitle' => 'Test Cases - ' . $module->name,
             'breadcrumbs' => [
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
                 ['title' => 'Test Cases']
             ],
             'project' => $project,
+            'module' => $module,
             'testCases' => $testCases
         ];
 
@@ -35,9 +38,9 @@ class TestCaseController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(Project $project)
+    public function create(Project $project, Module $module)
     {
-        $maxOrder = $project->testCases()->max('order') ?? 0;
+        $maxOrder = $module->testCases()->max('order') ?? 0;
 
         $data = [
             'pageTitle' => 'Create Test Case',
@@ -45,9 +48,11 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
                 ['title' => 'Create Test Case']
             ],
             'project' => $project,
+            'module' => $module,
             'nextOrder' => $maxOrder + 1
         ];
 
@@ -57,7 +62,7 @@ class TestCaseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request, Project $project)
+    public function store(Request $request, Project $project, Module $module)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -67,17 +72,18 @@ class TestCaseController extends Controller
         ]);
 
         $validated['project_id'] = $project->id;
+        $validated['module_id'] = $module->id;
 
         $testCase = TestCase::create($validated);
 
-        return redirect()->route('test-cases.index', $project)
+        return redirect()->route('test-cases.index', [$project, $module])
             ->with('success', 'Test case created successfully.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Project $project, TestCase $testCase)
+    public function show(Project $project, Module $module, TestCase $testCase)
     {
         $previousTestCase = $testCase->previousTestCase();
         $nextTestCase = $testCase->nextTestCase();
@@ -88,9 +94,11 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
                 ['title' => $testCase->name]
             ],
             'project' => $project,
+            'module' => $module,
             'testCase' => $testCase,
             'previousTestCase' => $previousTestCase,
             'nextTestCase' => $nextTestCase
@@ -102,7 +110,7 @@ class TestCaseController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Project $project, TestCase $testCase)
+    public function edit(Project $project, Module $module, TestCase $testCase)
     {
         $data = [
             'pageTitle' => 'Edit Test Case',
@@ -110,10 +118,12 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
-                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $testCase])],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
+                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $module, $testCase])],
                 ['title' => 'Edit']
             ],
             'project' => $project,
+            'module' => $module,
             'testCase' => $testCase
         ];
 
@@ -123,7 +133,7 @@ class TestCaseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Project $project, TestCase $testCase)
+    public function update(Request $request, Project $project, Module $module, TestCase $testCase)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -134,25 +144,25 @@ class TestCaseController extends Controller
 
         $testCase->update($validated);
 
-        return redirect()->route('test-cases.index', $project)
+        return redirect()->route('test-cases.index', [$project, $module])
             ->with('success', 'Test case updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Project $project, TestCase $testCase)
+    public function destroy(Project $project, Module $module, TestCase $testCase)
     {
         $testCase->delete();
 
-        return redirect()->route('test-cases.index', $project)
+        return redirect()->route('test-cases.index', [$project, $module])
             ->with('success', 'Test case deleted successfully.');
     }
 
     /**
      * Get events for a test case session
      */
-    public function getEvents(Project $project, TestCase $testCase)
+    public function getEvents(Project $project, Module $module, TestCase $testCase)
     {
         $events = $testCase->events()->orderBy('created_at', 'desc')->get();
 
@@ -168,7 +178,7 @@ class TestCaseController extends Controller
     /**
      * Clear all unsaved events for a test case
      */
-    public function clearEvents(Project $project, TestCase $testCase)
+    public function clearEvents(Project $project, Module $module, TestCase $testCase)
     {
         $deletedCount = $testCase->unsavedEvents()->delete();
 
@@ -182,7 +192,7 @@ class TestCaseController extends Controller
     /**
      * Save all unsaved events for a test case
      */
-    public function saveEvents(Project $project, TestCase $testCase)
+    public function saveEvents(Project $project, Module $module, TestCase $testCase)
     {
         $updated = $testCase->unsavedEvents()->update(['is_saved' => true]);
 
@@ -196,10 +206,10 @@ class TestCaseController extends Controller
     /**
      * Delete selected events
      */
-    public function deleteEvents(Request $request, Project $project, TestCase $testCase)
+    public function deleteEvents(Request $request, Project $project, Module $module, TestCase $testCase)
     {
         $eventIds = $request->input('event_ids', []);
-        
+
         if (empty($eventIds)) {
             return response()->json([
                 'success' => false,
@@ -221,7 +231,7 @@ class TestCaseController extends Controller
     /**
      * Show event capture instructions page
      */
-    public function captureInstructions(Project $project, TestCase $testCase)
+    public function captureInstructions(Project $project, Module $module, TestCase $testCase)
     {
         $data = [
             'pageTitle' => 'Event Capture Instructions',
@@ -229,13 +239,334 @@ class TestCaseController extends Controller
                 ['title' => 'Dashboard', 'url' => route('dashboard.index')],
                 ['title' => 'Projects', 'url' => route('projects.index')],
                 ['title' => $project->name, 'url' => route('projects.show', $project)],
-                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $testCase])],
+                ['title' => $module->name, 'url' => route('modules.show', [$project, $module])],
+                ['title' => $testCase->name, 'url' => route('test-cases.show', [$project, $module, $testCase])],
                 ['title' => 'Capture Instructions']
             ],
             'project' => $project,
+            'module' => $module,
             'testCase' => $testCase
         ];
 
         return view('Cypress::test-cases.capture-instructions', $data);
     }
+
+    /**
+     * Download Chrome extension ZIP file
+     */
+    public function downloadExtension()
+    {
+        $filePath = public_path('cypress/chrome-extension.zip');
+
+        if (!file_exists($filePath)) {
+            abort(404, 'Extension file not found');
+        }
+
+        return response()->download($filePath, 'chrome-extension.zip');
+    }
+
+    /**
+     * Generate Cypress test code from saved events
+     */
+    public function generateCypressCode(Project $project, Module $module, TestCase $testCase)
+    {
+        // Get only saved events, ordered by creation time
+        $events = TestCaseEvent::where('session_id', $testCase->session_id)
+            ->where('is_saved', true)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($events->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No saved events found. Please save some events first.'
+            ], 400);
+        }
+
+        // Generate Cypress code
+        $cypressCode = $this->convertEventsToCypressCode($events, $project, $module, $testCase);
+
+        // Create filename based on test case
+        $filename = $this->sanitizeFilename($testCase->name) . '.cy.js';
+
+        // Return as downloadable file
+        return response($cypressCode)
+            ->header('Content-Type', 'application/javascript')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
+    /**
+     * Convert events to Cypress test code
+     */
+    private function convertEventsToCypressCode($events, $project, $module, $testCase)
+    {
+        // Check if any events use xpath
+        $usesXpath = false;
+        foreach ($events as $event) {
+            $eventData = json_decode($event->event_data, true);
+            if ($eventData && isset($eventData['selectors']['xpath'])) {
+                $selectors = $eventData['selectors'];
+                // Check if xpath will be used (no better selector available)
+                if (empty($selectors['testId']) && empty($selectors['id']) &&
+                    empty($selectors['name']) && empty($selectors['ariaLabel']) &&
+                    empty($selectors['placeholder'])) {
+                    $usesXpath = true;
+                    break;
+                }
+            }
+        }
+
+        $code = "// Auto-generated Cypress Test\n";
+        $code .= "// Project: {$project->name}\n";
+        $code .= "// Module: {$module->name}\n";
+        $code .= "// Test Case: {$testCase->name}\n";
+        $code .= "// Generated: " . now()->format('Y-m-d H:i:s') . "\n";
+
+        if ($usesXpath) {
+            $code .= "//\n";
+            $code .= "// NOTE: This test uses XPath selectors.\n";
+            $code .= "// Install cypress-xpath plugin:\n";
+            $code .= "//   npm install -D cypress-xpath\n";
+            $code .= "// Then add to cypress/support/e2e.js:\n";
+            $code .= "//   require('cypress-xpath')\n";
+            $code .= "//\n";
+        }
+
+        $code .= "\n";
+
+        $code .= "describe('{$testCase->name}', () => {\n";
+
+        // Get the first URL from events
+        $firstUrl = null;
+        foreach ($events as $event) {
+            if ($event->url) {
+                $firstUrl = $event->url;
+                break;
+            }
+        }
+
+        if ($firstUrl) {
+            $code .= "  beforeEach(() => {\n";
+            $code .= "    cy.visit('{$firstUrl}')\n";
+            $code .= "  })\n\n";
+        }
+
+        $code .= "  it('should execute test steps', () => {\n";
+
+        $previousUrl = $firstUrl;
+
+        foreach ($events as $index => $event) {
+            $eventData = json_decode($event->event_data, true);
+
+            // Skip if event data is invalid
+            if (!$eventData) {
+                continue;
+            }
+
+            // Check if URL changed (navigation)
+            if ($event->url && $event->url !== $previousUrl) {
+                $code .= "    // Navigation detected\n";
+                $code .= "    cy.url().should('include', '" . parse_url($event->url, PHP_URL_PATH) . "')\n";
+                $previousUrl = $event->url;
+            }
+
+            // Convert event to Cypress command
+            $cypressCommand = $this->eventToCypressCommand($event, $eventData);
+
+            if ($cypressCommand) {
+                $code .= $cypressCommand;
+            }
+        }
+
+        $code .= "  })\n";
+        $code .= "})\n";
+
+        return $code;
+    }
+
+    /**
+     * Convert a single event to Cypress command
+     */
+    private function eventToCypressCommand($event, $eventData)
+    {
+        $eventType = strtolower($event->event_type);
+
+        // Handle navigation events
+        if ($eventType === 'navigation') {
+            $url = $eventData['url'] ?? '';
+            $path = parse_url($url, PHP_URL_PATH);
+            return "    // Navigation to: {$url}\n    cy.url().should('include', '{$path}')\n";
+        }
+
+        $selector = $this->getBestSelector($eventData);
+
+        if (!$selector) {
+            return "    // Unable to generate selector for {$eventType} event\n";
+        }
+
+        // Check if selector is xpath (starts with xpath()
+        $isXpath = strpos($selector, 'xpath(') === 0;
+        $getCommand = $isXpath ? 'cy.' . $selector : "cy.get('{$selector}')";
+
+        $command = '';
+
+        switch ($eventType) {
+            case 'click':
+                $text = $eventData['innerText'] ?? $eventData['text'] ?? '';
+                $label = $eventData['selectors']['label'] ?? '';
+                $comment = $label ? " // Click: {$label}" : ($text ? " // Click: " . substr($text, 0, 30) : '');
+
+                // If clicking a link with external URL, add wait for navigation
+                if (isset($eventData['targetUrl']) && $eventData['isExternal']) {
+                    $command = "    {$getCommand}.click() // External link: {$eventData['targetUrl']}\n";
+                    $command .= "    cy.url().should('not.equal', '" . ($eventData['pageUrl'] ?? '') . "') // Wait for navigation\n";
+                } else {
+                    $command = "    {$getCommand}.click(){$comment}\n";
+                }
+                break;
+
+            case 'input':
+                $value = $event->value ?? $eventData['value'] ?? '';
+                if ($value) {
+                    $escapedValue = addslashes($value);
+                    $fieldName = $this->getFieldName($eventData);
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $comment = $label ? " // Input: {$label}" : ($fieldName ? " // Input: {$fieldName}" : '');
+                    $command = "    {$getCommand}.clear().type('{$escapedValue}'){$comment}\n";
+                }
+                break;
+
+            case 'change':
+            case 'select':
+                if (isset($eventData['selectedText']) || isset($eventData['selectedValue'])) {
+                    $selectValue = $eventData['selectedText'] ?? $eventData['selectedValue'] ?? '';
+                    $escapedValue = addslashes($selectValue);
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $comment = $label ? " // {$label}" : '';
+                    $command = "    {$getCommand}.select('{$escapedValue}'){$comment} // Select: {$selectValue}\n";
+                }
+                break;
+
+            case 'checkbox':
+            case 'radio':
+                if (isset($eventData['checked'])) {
+                    $action = $eventData['checked'] ? 'check' : 'uncheck';
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $fieldName = $this->getFieldName($eventData);
+                    $comment = $label ? " // {$label}" : ($fieldName ? " // {$fieldName}" : '');
+                    $command = "    {$getCommand}.{$action}(){$comment}\n";
+                }
+                break;
+
+            case 'file':
+            case 'file_upload':
+                if (isset($eventData['fileNames']) && !empty($eventData['fileNames'])) {
+                    $files = implode(', ', array_map('addslashes', $eventData['fileNames']));
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $comment = $label ? " // {$label}" : '';
+                    $command = "    // File upload: {$files}{$comment}\n";
+                    $command .= "    // {$getCommand}.selectFile('path/to/file')\n";
+                }
+                break;
+
+            case 'submit':
+            case 'form_submit':
+                $command = "    {$getCommand}.submit() // Form submission\n";
+                break;
+
+            default:
+                $command = "    // {$eventType}: {$selector}\n";
+        }
+
+        return $command;
+    }
+
+    /**
+     * Get best selector based on priority: testId > id > name > ariaLabel > placeholder > label > xpath
+     */
+    private function getBestSelector($eventData)
+    {
+        $selectors = $eventData['selectors'] ?? [];
+
+        // Priority order - Stable selectors first
+        if (!empty($selectors['testId'])) {
+            return '[data-testid="' . addslashes($selectors['testId']) . '"]';
+        }
+
+        if (!empty($selectors['id'])) {
+            return '#' . addslashes($selectors['id']);
+        }
+
+        if (!empty($selectors['name'])) {
+            return '[name="' . addslashes($selectors['name']) . '"]';
+        }
+
+        if (!empty($selectors['ariaLabel'])) {
+            return '[aria-label="' . addslashes($selectors['ariaLabel']) . '"]';
+        }
+
+        if (!empty($selectors['placeholder'])) {
+            return '[placeholder="' . addslashes($selectors['placeholder']) . '"]';
+        }
+
+        // Try label (new addition)
+        if (!empty($selectors['label'])) {
+            // Labels are usually used for form fields, try to find by label text
+            // This is a heuristic approach
+            return null; // We'll use cypressSelector or xpath instead
+        }
+
+        // Fall back to cypressSelector (already contains preferred selector)
+        if (!empty($eventData['cypressSelector'])) {
+            // If cypressSelector contains xpath, format it for Cypress xpath plugin
+            $cypressSelector = $eventData['cypressSelector'];
+            if (strpos($cypressSelector, '/html') === 0 || strpos($cypressSelector, '//') === 0 || strpos($cypressSelector, '//*') === 0) {
+                // This is an xpath, use xpath() syntax for cypress-xpath plugin
+                return "xpath('" . addslashes($cypressSelector) . "')";
+            }
+            return $cypressSelector;
+        }
+
+        // Fall back to xpath from selectors
+        if (!empty($selectors['xpath'])) {
+            // Use xpath() syntax for cypress-xpath plugin
+            return "xpath('" . addslashes($selectors['xpath']) . "')";
+        }
+
+        // Last resort - use the tagName with index if available
+        if (!empty($eventData['tagName'])) {
+            return strtolower($eventData['tagName']);
+        }
+
+        return null;
+    }
+
+    /**
+     * Get field name for better comments
+     */
+    private function getFieldName($eventData)
+    {
+        $selectors = $eventData['selectors'] ?? [];
+
+        return $selectors['label'] ??
+               $selectors['name'] ??
+               $selectors['id'] ??
+               $selectors['placeholder'] ??
+               $selectors['ariaLabel'] ??
+               null;
+    }
+
+    /**
+     * Sanitize filename
+     */
+    private function sanitizeFilename($name)
+    {
+        // Replace spaces and special characters
+        $name = preg_replace('/[^a-zA-Z0-9-_]/', '-', $name);
+        $name = preg_replace('/-+/', '-', $name);
+        $name = trim($name, '-');
+
+        return strtolower($name);
+    }
 }
+

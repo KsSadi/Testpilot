@@ -6,15 +6,15 @@
 <div style="padding: 24px;">
     <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">Test Cases - {{ $project->name }}</h1>
-            <p style="color: #6b7280;">Manage test cases for this project</p>
+            <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">Test Cases - {{ $module->name }}</h1>
+            <p style="color: #6b7280;">Manage test cases for this module</p>
         </div>
         <div style="display: flex; gap: 12px;">
-            <a href="{{ route('test-cases.create', $project) }}" style="padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+            <a href="{{ route('test-cases.create', [$project, $module]) }}" style="padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
                 <i class="fas fa-plus"></i> Create Test Case
             </a>
-            <a href="{{ route('projects.show', $project) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                <i class="fas fa-arrow-left"></i> Back to Project
+            <a href="{{ route('modules.show', [$project, $module]) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                <i class="fas fa-arrow-left"></i> Back to Module
             </a>
         </div>
     </div>
@@ -48,7 +48,7 @@
                         </span>
                     </td>
                     <td style="padding: 12px 16px;">
-                        <a href="{{ route('test-cases.show', [$project, $testCase]) }}" style="color: #2563eb; text-decoration: none; font-weight: 500;">
+                        <a href="{{ route('test-cases.show', [$project, $module, $testCase]) }}" style="color: #2563eb; text-decoration: none; font-weight: 500;">
                             {{ $testCase->name }}
                         </a>
                     </td>
@@ -65,13 +65,13 @@
                     </td>
                     <td style="padding: 12px 16px; text-align: right;">
                         <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                            <a href="{{ route('test-cases.show', [$project, $testCase]) }}" style="padding: 6px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
+                            <a href="{{ route('test-cases.show', [$project, $module, $testCase]) }}" style="padding: 6px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
                                 <i class="fas fa-eye"></i> View
                             </a>
-                            <a href="{{ route('test-cases.edit', [$project, $testCase]) }}" style="padding: 6px 12px; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
+                            <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" style="padding: 6px 12px; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <form action="{{ route('test-cases.destroy', [$project, $testCase]) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this test case?');">
+                            <form action="{{ route('test-cases.destroy', [$project, $module, $testCase]) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this test case?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
@@ -89,7 +89,7 @@
             <i class="fas fa-list-check" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
             <p style="font-size: 1.125rem; margin: 0;">No test cases yet</p>
             <p style="margin-top: 8px;">Create your first test case to get started</p>
-            <a href="{{ route('test-cases.create', $project) }}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+            <a href="{{ route('test-cases.create', [$project, $module]) }}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #16a34a; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
                 <i class="fas fa-plus"></i> Create Test Case
             </a>
         </div>

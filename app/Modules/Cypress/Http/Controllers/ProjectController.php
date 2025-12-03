@@ -14,7 +14,7 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        $projects = Project::with('creator', 'testCases')
+        $projects = Project::with('creator', 'modules')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
@@ -71,8 +71,8 @@ class ProjectController extends Controller
      */
     public function show(Project $project)
     {
-        $project->load(['testCases' => function($query) {
-            $query->orderBy('order');
+        $project->load(['modules' => function($query) {
+            $query->orderBy('order')->with('testCases');
         }]);
 
         $data = [

@@ -31,7 +31,7 @@
                     <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Name</th>
                     <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Description</th>
                     <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Status</th>
-                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Test Cases</th>
+                    <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Modules</th>
                     <th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #374151;">Created By</th>
                     <th style="padding: 12px 16px; text-align: right; font-weight: 600; color: #374151;">Actions</th>
                 </tr>
@@ -54,7 +54,7 @@
                     </td>
                     <td style="padding: 12px 16px;">
                         <span style="padding: 4px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-size: 0.875rem;">
-                            {{ $project->testCases->count() }}
+                            {{ $project->modules->count() }}
                         </span>
                     </td>
                     <td style="padding: 12px 16px; color: #6b7280;">
@@ -62,8 +62,8 @@
                     </td>
                     <td style="padding: 12px 16px; text-align: right;">
                         <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                            <a href="{{ route('test-cases.index', $project) }}" style="padding: 6px 12px; background: #16a34a; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
-                                <i class="fas fa-list"></i> Test Cases
+                            <a href="{{ route('projects.show', $project) }}" style="padding: 6px 12px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
+                                <i class="fas fa-eye"></i> View
                             </a>
                             <a href="{{ route('projects.edit', $project) }}" style="padding: 6px 12px; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem;">
                                 <i class="fas fa-edit"></i>

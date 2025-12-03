@@ -31,6 +31,14 @@ class Project extends Model
     }
 
     /**
+     * Get all modules for this project
+     */
+    public function modules()
+    {
+        return $this->hasMany(Module::class)->orderBy('order');
+    }
+
+    /**
      * Get all test cases for this project
      */
     public function testCases()

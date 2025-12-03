@@ -10,7 +10,7 @@
             <h1 style="font-size: 2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;">Event Capture Instructions</h1>
             <p style="color: #6b7280;">Setup guide for Test Case: <strong>{{ $testCase->name }}</strong></p>
         </div>
-        <a href="{{ route('test-cases.show', [$project, $testCase]) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+        <a href="{{ route('test-cases.show', [$project, $module, $testCase]) }}" style="padding: 10px 20px; background: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
             <i class="fas fa-arrow-left"></i> Back to Test Case
         </a>
     </div>
@@ -32,7 +32,7 @@
     {{-- Method 1: Bookmarklet --}}
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
         <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">📚 Method 1: Bookmarklet (Easiest)</h2>
-        
+
         <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 16px; border-radius: 4px;">
             <h3 style="font-weight: 600; color: #1e40af; margin-bottom: 8px;">Step 1: Drag to Bookmarks Bar</h3>
             <p style="color: #1e40af; margin-bottom: 12px;">Drag this button to your browser's bookmarks bar:</p>
@@ -40,7 +40,7 @@
                 <p class="drag-instruction" style="color: #667eea; font-weight: 600; margin-bottom: 12px; font-size: 0.875rem;">
                     👇 Drag this button to your bookmarks bar 👇
                 </p>
-                <a id="bookmarklet-link" href="#" 
+                <a id="bookmarklet-link" href="#"
                    draggable="true"
                    style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; border-radius: 8px; text-decoration: none; font-size: 1.125rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: grab;"
                    onclick="alert('Please DRAG this button to your bookmarks bar!'); return false;">
@@ -70,7 +70,7 @@
     {{-- Method 2: Chrome Extension --}}
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 24px;">
         <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">⭐ Method 2: Chrome Extension (Auto-Capture)</h2>
-        
+
         <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 16px; margin-bottom: 16px; border-radius: 4px;">
             <p style="color: #1e40af; font-weight: 600; margin-bottom: 4px;">🎯 RECOMMENDED - Automatic event capture!</p>
             <p style="color: #1e40af; font-size: 0.875rem;">No need to click on every page</p>
@@ -78,12 +78,12 @@
 
         <div style="margin-bottom: 16px;">
             <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 12px;">Installation Steps</h3>
-            
+
             <ol style="color: #6b7280; padding-left: 20px;">
                 <li style="margin-bottom: 12px;">
                     <strong>Download Extension:</strong> Located at <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 3px;">{{ public_path('cypress/chrome-extension') }}</code>
                     <br>
-                    <a href="{{ url('/cypress/chrome-extension.zip') }}" download style="display: inline-block; margin-top: 4px; padding: 6px 12px; background: #2563eb; color: white; border-radius: 4px; text-decoration: none; font-size: 0.875rem;">
+                    <a href="{{ route('cypress.download-extension') }}" style="display: inline-block; margin-top: 4px; padding: 6px 12px; background: #2563eb; color: white; border-radius: 4px; text-decoration: none; font-size: 0.875rem;">
                         📦 Download ZIP
                     </a>
                 </li>
@@ -111,9 +111,9 @@
     {{-- Method 3: Manual Console --}}
     <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; padding: 24px;">
         <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 16px;">🔧 Method 3: Manual Console Injection</h2>
-        
+
         <p style="color: #6b7280; margin-bottom: 16px;">Paste this code in browser console (F12):</p>
-        
+
         <div style="position: relative;">
             <pre id="console-code" style="background: #1f2937; color: #e5e7eb; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 0.875rem; font-family: 'Courier New', monospace; margin: 0;">(function() {
     var script = document.createElement('script');
@@ -145,14 +145,14 @@ bookmarklet.addEventListener('dragstart', function(e) {
     this.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('text/plain', this.href);
-    
+
     // Create custom drag image
     const dragImage = this.cloneNode(true);
     dragImage.style.position = 'absolute';
     dragImage.style.top = '-1000px';
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, 0, 0);
-    
+
     setTimeout(() => document.body.removeChild(dragImage), 0);
 });
 
