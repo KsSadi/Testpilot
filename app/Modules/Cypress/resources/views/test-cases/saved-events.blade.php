@@ -145,7 +145,10 @@
                     </h3>
                     <p class="text-sm text-gray-500 mt-1">Events are displayed in chronological order (newest first)</p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <button onclick="openImportModal()" class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow text-sm">
+                        <i class="fas fa-file-import mr-2"></i>Import Events
+                    </button>
                     <span class="text-sm text-gray-600">
                         Showing <strong id="visible-count">{{ $savedEvents->count() }}</strong> of <strong>{{ $savedEvents->count() }}</strong> events
                     </span>
@@ -176,7 +179,8 @@
                          data-event-type="{{ $event->event_type }}"
                          data-selector="{{ $event->selector }}"
                          data-value="{{ $event->value }}"
-                         data-text="{{ $event->inner_text }}">
+                         data-text="{{ $event->inner_text }}"
+                         data-event-id="{{ $event->id }}">
                         
                         {{-- Event Header --}}
                         <div class="flex flex-col md:flex-row justify-between mb-3 gap-2">
@@ -188,9 +192,38 @@
                                     {{ formatEventTitle($event) }}
                                 </span>
                             </div>
-                            <span class="text-gray-500 text-xs">
-                                <i class="far fa-clock mr-1"></i>{{ $event->created_at->format('M d, Y H:i:s') }}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-500 text-xs hidden md:block">
+                                    <i class="far fa-clock mr-1"></i>{{ $event->created_at->format('M d, Y H:i:s') }}
+                                </span>
+                                {{-- Action Buttons --}}
+                                <div class="flex items-center gap-1">
+                                    @if($index > 0)
+                                        <button onclick="moveEvent({{ $event->id }}, 'up')" 
+                                                class="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition" 
+                                                title="Move Up">
+                                            <i class="fas fa-arrow-up text-sm"></i>
+                                        </button>
+                                    @endif
+                                    @if($index < $savedEvents->count() - 1)
+                                        <button onclick="moveEvent({{ $event->id }}, 'down')" 
+                                                class="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition" 
+                                                title="Move Down">
+                                            <i class="fas fa-arrow-down text-sm"></i>
+                                        </button>
+                                    @endif
+                                    <button onclick="editEvent({{ $event->id }})" 
+                                            class="p-1.5 text-green-600 hover:bg-green-100 rounded transition" 
+                                            title="Edit Event">
+                                        <i class="fas fa-edit text-sm"></i>
+                                    </button>
+                                    <button onclick="deleteEvent({{ $event->id }})" 
+                                            class="p-1.5 text-red-600 hover:bg-red-100 rounded transition" 
+                                            title="Delete Event">
+                                        <i class="fas fa-trash text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         {{-- Event Details --}}
@@ -276,6 +309,169 @@
                     </div>
                 @endforeach
             @endif
+        </div>
+    </div>
+
+    {{-- Edit Event Modal --}}
+    <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {{-- Modal Header --}}
+            <div class="bg-gradient-to-r from-green-500 to-green-600 p-5 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fas fa-edit"></i>
+                            Edit Event
+                        </h3>
+                        <p class="text-green-100 text-sm mt-1">Modify event details and selector</p>
+                    </div>
+                    <button onclick="closeEditModal()" class="text-white hover:text-green-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Modal Body --}}
+            <form id="edit-event-form" class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                <input type="hidden" id="edit-event-id">
+                
+                <div class="space-y-4">
+                    {{-- Event Type (Read-only) --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tag text-cyan-600 mr-1"></i>Event Type
+                        </label>
+                        <input type="text" id="edit-event-type" readonly
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-600">
+                        <p class="text-xs text-gray-500 mt-1">Event type cannot be changed</p>
+                    </div>
+
+                    {{-- Selector --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-crosshairs text-orange-600 mr-1"></i>Selector *
+                        </label>
+                        <input type="text" id="edit-selector" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-sm"
+                               placeholder="CSS selector or XPath">
+                        <p class="text-xs text-gray-500 mt-1">CSS selector or XPath to target the element</p>
+                    </div>
+
+                    {{-- Value (for input/change events) --}}
+                    <div id="edit-value-field">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-keyboard text-purple-600 mr-1"></i>Value
+                        </label>
+                        <input type="text" id="edit-value"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                               placeholder="Input value">
+                        <p class="text-xs text-gray-500 mt-1">Value to be entered (for input/change events)</p>
+                    </div>
+
+                    {{-- Inner Text (for click events) --}}
+                    <div id="edit-text-field">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-quote-right text-green-600 mr-1"></i>Element Text
+                        </label>
+                        <input type="text" id="edit-inner-text"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                               placeholder="Button or element text">
+                        <p class="text-xs text-gray-500 mt-1">Text content of the element</p>
+                    </div>
+
+                    {{-- Tag Name --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-code text-red-600 mr-1"></i>HTML Tag
+                        </label>
+                        <input type="text" id="edit-tag-name"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                               placeholder="button, input, div, etc.">
+                        <p class="text-xs text-gray-500 mt-1">HTML tag name of the element</p>
+                    </div>
+
+                    {{-- Comment/Note (Optional) --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-comment text-blue-600 mr-1"></i>Comment (Optional)
+                        </label>
+                        <textarea id="edit-comment" rows="2"
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                  placeholder="Add a note about this event..."></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Optional note for documentation</p>
+                    </div>
+                </div>
+            </form>
+
+            {{-- Modal Footer --}}
+            <div class="border-t border-gray-200 p-5 bg-gray-50">
+                <div class="flex items-center justify-end gap-3">
+                    <button onclick="closeEditModal()" class="btn-secondary">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                    <button onclick="saveEventChanges()" class="btn-primary bg-green-600 hover:bg-green-700">
+                        <i class="fas fa-save mr-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Import Events Modal --}}
+    <div id="import-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+            {{-- Modal Header --}}
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 p-5 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fas fa-file-import"></i>
+                            Import Events from Another Test Case
+                        </h3>
+                        <p class="text-purple-100 text-sm mt-1">Select a test case to copy its saved events</p>
+                    </div>
+                    <button onclick="closeImportModal()" class="text-white hover:text-purple-200 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Modal Body --}}
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                {{-- Search Filter --}}
+                <div class="mb-4">
+                    <input type="text" id="test-case-search" placeholder="Search test cases..." 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                           onkeyup="filterTestCases()">
+                </div>
+
+                {{-- Loading State --}}
+                <div id="loading-test-cases" class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                    <p class="text-gray-600 mt-3">Loading test cases...</p>
+                </div>
+
+                {{-- Test Cases List --}}
+                <div id="test-cases-list" class="hidden space-y-3">
+                    {{-- Will be populated by JavaScript --}}
+                </div>
+
+                {{-- No Results --}}
+                <div id="no-test-cases" class="hidden text-center py-8 text-gray-400">
+                    <i class="fas fa-search text-5xl mb-3"></i>
+                    <p class="text-lg font-medium text-gray-500">No test cases found</p>
+                    <p class="text-sm">Try a different search term or create new test cases</p>
+                </div>
+            </div>
+
+            {{-- Modal Footer --}}
+            <div class="border-t border-gray-200 p-5 bg-gray-50">
+                <div class="flex items-center justify-end gap-3">
+                    <button onclick="closeImportModal()" class="btn-secondary">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -499,4 +695,400 @@ details summary i {
     outline: none;
 }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+const projectId = '{{ $project->getRouteKey() }}';
+const moduleId = '{{ $module->getRouteKey() }}';
+const testCaseId = '{{ $testCase->getRouteKey() }}';
+
+// Open import modal and load test cases
+function openImportModal() {
+    document.getElementById('import-modal').classList.remove('hidden');
+    loadTestCases();
+}
+
+// Close import modal
+function closeImportModal() {
+    document.getElementById('import-modal').classList.add('hidden');
+    document.getElementById('test-case-search').value = '';
+}
+
+// Load test cases from the same project
+function loadTestCases() {
+    const loadingEl = document.getElementById('loading-test-cases');
+    const listEl = document.getElementById('test-cases-list');
+    const noResultsEl = document.getElementById('no-test-cases');
+
+    loadingEl.classList.remove('hidden');
+    listEl.classList.add('hidden');
+    noResultsEl.classList.add('hidden');
+
+    fetch(`/projects/${projectId}/test-cases-for-import?exclude=${testCaseId}`)
+        .then(response => response.json())
+        .then(data => {
+            loadingEl.classList.add('hidden');
+            
+            if (data.testCases && data.testCases.length > 0) {
+                renderTestCases(data.testCases);
+                listEl.classList.remove('hidden');
+            } else {
+                noResultsEl.classList.remove('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading test cases:', error);
+            loadingEl.classList.add('hidden');
+            noResultsEl.classList.remove('hidden');
+        });
+}
+
+// Render test cases list
+function renderTestCases(testCases) {
+    const listEl = document.getElementById('test-cases-list');
+    listEl.innerHTML = '';
+
+    testCases.forEach(testCase => {
+        const div = document.createElement('div');
+        div.className = 'test-case-item bg-gray-50 hover:bg-purple-50 border border-gray-200 hover:border-purple-300 rounded-lg p-4 cursor-pointer transition';
+        div.dataset.name = testCase.name.toLowerCase();
+        div.dataset.moduleName = testCase.module_name.toLowerCase();
+        div.onclick = () => importEventsFrom(testCase.hashid, testCase.name);
+
+        div.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 class="font-semibold text-gray-800">${testCase.name}</h4>
+                        <span class="badge-primary text-xs">${testCase.module_name}</span>
+                    </div>
+                    <p class="text-sm text-gray-600">${testCase.description || 'No description'}</p>
+                    <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                        <span><i class="fas fa-database mr-1 text-green-600"></i>${testCase.events_count} saved events</span>
+                        <span><i class="far fa-clock mr-1"></i>Created ${testCase.created_at}</span>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <button class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-download mr-2"></i>Import
+                    </button>
+                </div>
+            </div>
+        `;
+
+        listEl.appendChild(div);
+    });
+}
+
+// Filter test cases based on search
+function filterTestCases() {
+    const searchTerm = document.getElementById('test-case-search').value.toLowerCase();
+    const testCaseItems = document.querySelectorAll('.test-case-item');
+    let visibleCount = 0;
+
+    testCaseItems.forEach(item => {
+        const name = item.dataset.name;
+        const moduleName = item.dataset.moduleName;
+        
+        if (name.includes(searchTerm) || moduleName.includes(searchTerm)) {
+            item.classList.remove('hidden');
+            visibleCount++;
+        } else {
+            item.classList.add('hidden');
+        }
+    });
+
+    // Show no results message if nothing visible
+    const noResultsEl = document.getElementById('no-test-cases');
+    const listEl = document.getElementById('test-cases-list');
+    
+    if (visibleCount === 0 && searchTerm !== '') {
+        noResultsEl.classList.remove('hidden');
+        listEl.classList.add('hidden');
+    } else if (visibleCount > 0) {
+        noResultsEl.classList.add('hidden');
+        listEl.classList.remove('hidden');
+    }
+}
+
+// Import events from selected test case
+function importEventsFrom(sourceTestCaseId, sourceTestCaseName) {
+    if (!confirm(`Import all saved events from "${sourceTestCaseName}"?\n\nThis will add them to your current test case.`)) {
+        return;
+    }
+
+    // Show loading state
+    const modal = document.getElementById('import-modal');
+    modal.innerHTML = `
+        <div class="p-12 text-center">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mb-4"></div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Importing Events...</h3>
+            <p class="text-gray-600">Please wait while we copy the events</p>
+        </div>
+    `;
+
+    fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/import-events`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            source_test_case_id: sourceTestCaseId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeImportModal();
+            
+            // Show success notification
+            if (typeof showNotification === 'function') {
+                showNotification('success', 'Import Successful!', `Successfully imported ${data.imported_count} events from "${sourceTestCaseName}"`);
+            } else {
+                alert(`Success! Imported ${data.imported_count} events from "${sourceTestCaseName}"`);
+            }
+            
+            // Reload page to show new events
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            alert('Error: ' + (data.message || 'Failed to import events'));
+            closeImportModal();
+        }
+    })
+    .catch(error => {
+        console.error('Error importing events:', error);
+        alert('An error occurred while importing events');
+        closeImportModal();
+    });
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImportModal();
+        closeEditModal();
+    }
+});
+
+// Close modal on background click
+document.getElementById('import-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeImportModal();
+    }
+});
+
+document.getElementById('edit-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
+});
+
+// =============================================================================
+// EDIT EVENT FUNCTIONALITY
+// =============================================================================
+
+function editEvent(eventId) {
+    // Find the event card
+    const eventCard = document.querySelector(`[data-event-id="${eventId}"]`);
+    if (!eventCard) return;
+
+    // Get event data from the card
+    const eventType = eventCard.dataset.eventType;
+    const selector = eventCard.dataset.selector;
+    const value = eventCard.dataset.value || '';
+    const innerText = eventCard.dataset.text || '';
+
+    // Populate the modal
+    document.getElementById('edit-event-id').value = eventId;
+    document.getElementById('edit-event-type').value = eventType.toUpperCase();
+    document.getElementById('edit-selector').value = selector;
+    document.getElementById('edit-value').value = value;
+    document.getElementById('edit-inner-text').value = innerText;
+
+    // Show/hide fields based on event type
+    const valueField = document.getElementById('edit-value-field');
+    const textField = document.getElementById('edit-text-field');
+    
+    if (eventType === 'click') {
+        valueField.classList.add('hidden');
+        textField.classList.remove('hidden');
+    } else {
+        valueField.classList.remove('hidden');
+        textField.classList.add('hidden');
+    }
+
+    // Show modal
+    document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+    document.getElementById('edit-event-form').reset();
+}
+
+function saveEventChanges() {
+    const eventId = document.getElementById('edit-event-id').value;
+    const selector = document.getElementById('edit-selector').value;
+    const value = document.getElementById('edit-value').value;
+    const innerText = document.getElementById('edit-inner-text').value;
+    const tagName = document.getElementById('edit-tag-name').value;
+    const comment = document.getElementById('edit-comment').value;
+
+    if (!selector.trim()) {
+        alert('Selector is required');
+        return;
+    }
+
+    // Show loading
+    const modal = document.getElementById('edit-modal');
+    const originalContent = modal.innerHTML;
+    modal.innerHTML = `
+        <div class="p-12 text-center">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mb-4"></div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Saving Changes...</h3>
+            <p class="text-gray-600">Please wait</p>
+        </div>
+    `;
+
+    fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/events/${eventId}/update`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            selector: selector,
+            value: value,
+            inner_text: innerText,
+            tag_name: tagName,
+            comment: comment
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeEditModal();
+            if (typeof showNotification === 'function') {
+                showNotification('success', 'Updated!', 'Event updated successfully!');
+            }
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            modal.innerHTML = originalContent;
+            alert('Error: ' + (data.message || 'Failed to update event'));
+        }
+    })
+    .catch(error => {
+        console.error('Error updating event:', error);
+        modal.innerHTML = originalContent;
+        alert('An error occurred while updating the event');
+    });
+}
+
+// =============================================================================
+// DELETE EVENT FUNCTIONALITY
+// =============================================================================
+
+function deleteEvent(eventId) {
+    if (!confirm('Are you sure you want to delete this event?\n\nThis action cannot be undone.')) {
+        return;
+    }
+
+    // Show loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
+    loadingOverlay.innerHTML = `
+        <div class="bg-white p-8 rounded-xl shadow-2xl text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+            <h3 class="text-lg font-semibold text-gray-800">Deleting Event...</h3>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+
+    fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/events/${eventId}/delete`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingOverlay.remove();
+        
+        if (data.success) {
+            if (typeof showNotification === 'function') {
+                showNotification('success', 'Deleted!', 'Event deleted successfully!');
+            }
+            
+            // Remove the event card from DOM
+            const eventCard = document.querySelector(`[data-event-id="${eventId}"]`);
+            if (eventCard) {
+                eventCard.style.opacity = '0';
+                eventCard.style.transform = 'translateX(-20px)';
+                setTimeout(() => {
+                    eventCard.remove();
+                    // Update visible count
+                    const visibleCount = document.querySelectorAll('.event-item').length;
+                    document.getElementById('visible-count').textContent = visibleCount;
+                }, 300);
+            }
+        } else {
+            alert('Error: ' + (data.message || 'Failed to delete event'));
+        }
+    })
+    .catch(error => {
+        loadingOverlay.remove();
+        console.error('Error deleting event:', error);
+        alert('An error occurred while deleting the event');
+    });
+}
+
+// =============================================================================
+// REORDER EVENT FUNCTIONALITY
+// =============================================================================
+
+function moveEvent(eventId, direction) {
+    const eventCard = document.querySelector(`[data-event-id="${eventId}"]`);
+    if (!eventCard) return;
+
+    // Show loading
+    eventCard.style.opacity = '0.5';
+    eventCard.style.pointerEvents = 'none';
+
+    fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/events/${eventId}/move`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            direction: direction
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (typeof showNotification === 'function') {
+                showNotification('success', 'Reordered!', `Event moved ${direction} successfully!`);
+            }
+            // Reload to show new order
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            eventCard.style.opacity = '1';
+            eventCard.style.pointerEvents = 'auto';
+            alert('Error: ' + (data.message || 'Failed to move event'));
+        }
+    })
+    .catch(error => {
+        eventCard.style.opacity = '1';
+        eventCard.style.pointerEvents = 'auto';
+        console.error('Error moving event:', error);
+        alert('An error occurred while moving the event');
+    });
+}
+</script>
 @endpush

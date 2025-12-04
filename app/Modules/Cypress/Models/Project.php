@@ -6,14 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\User;
 use App\Traits\HasHashedRouteKey;
+use App\Traits\Shareable;
 
 class Project extends Model
 {
-    use HasFactory, HasHashedRouteKey;
+    use HasFactory, HasHashedRouteKey, Shareable;
 
     protected $fillable = [
         'name',
         'description',
+        'logo',
+        'url',
         'status',
         'created_by'
     ];

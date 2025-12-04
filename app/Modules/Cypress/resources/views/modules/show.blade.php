@@ -34,6 +34,11 @@
             <a href="{{ route('projects.show', $project) }}" class="btn-secondary flex-1 md:flex-none text-center">
                 <i class="fas fa-arrow-left mr-2"></i>Back
             </a>
+            @if($module->created_by === auth()->id())
+            <button onclick="openShareModal()" class="btn-secondary flex-1 md:flex-none text-center bg-purple-500 text-white hover:bg-purple-600">
+                <i class="fas fa-share-alt mr-2"></i>Share
+            </button>
+            @endif
             <a href="{{ route('test-cases.create', [$project, $module]) }}" class="btn-primary flex-1 md:flex-none text-center">
                 <i class="fas fa-plus mr-2"></i>Add Test Case
             </a>
@@ -188,4 +193,230 @@
         </div>
         @endif
     </div>
+
+    {{-- Share Modal --}}
+    <div id="shareModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 py-6">
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">Share Module</h3>
+                        <p class="text-sm text-gray-500 mt-1">Invite team members to collaborate on this module</p>
+                    </div>
+                    <button onclick="closeShareModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Invite Form -->
+                <div class="p-6 border-b border-gray-200">
+                    <form id="inviteForm" class="flex gap-3">
+                        <input type="email" id="inviteEmail" placeholder="Enter email address" 
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <select id="inviteRole" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="editor">Editor</option>
+                            <option value="viewer">Viewer</option>
+                        </select>
+                        <button type="submit" class="btn-primary bg-purple-500 hover:bg-purple-600">
+                            <i class="fas fa-paper-plane mr-2"></i>Invite
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Collaborators List -->
+                <div class="p-6">
+                    <h4 class="font-semibold text-gray-800 mb-4">Collaborators</h4>
+                    <div id="collaboratorsList" class="space-y-3">
+                        <div class="text-center text-gray-500 py-4">
+                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
+
+@push('scripts')
+<script>
+    let moduleShareableId = '{{ $module->id }}';
+
+    function openShareModal() {
+        document.getElementById('shareModal').classList.remove('hidden');
+        loadCollaborators();
+    }
+
+    function closeShareModal() {
+        document.getElementById('shareModal').classList.add('hidden');
+    }
+
+    function loadCollaborators() {
+        fetch(`{{ route('share.index') }}?shareable_type=module&shareable_id=${moduleShareableId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayCollaborators(data.collaborators, data.is_owner);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading collaborators:', error);
+                showNotification('Failed to load collaborators', 'error');
+            });
+    }
+
+    function displayCollaborators(collaborators, isOwner) {
+        const container = document.getElementById('collaboratorsList');
+        
+        if (collaborators.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-gray-500 py-4">
+                    <i class="fas fa-users text-3xl mb-2 opacity-50"></i>
+                    <p>No collaborators yet</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = collaborators.map(share => `
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-semibold">
+                        ${share.shared_with.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-800">${share.shared_with.name}</p>
+                        <p class="text-sm text-gray-500">${share.shared_with.email}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                        share.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                        share.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                    }">
+                        ${share.status.charAt(0).toUpperCase() + share.status.slice(1)}
+                    </span>
+                    ${isOwner && share.status === 'accepted' ? `
+                        <select onchange="updateRole(${share.id}, this.value)" class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="editor" ${share.role === 'editor' ? 'selected' : ''}>Editor</option>
+                            <option value="viewer" ${share.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+                        </select>
+                        <button onclick="removeCollaborator(${share.id})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('inviteForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('inviteEmail').value;
+        const role = document.getElementById('inviteRole').value;
+
+        try {
+            const response = await fetch('{{ route('share.store') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    role: role,
+                    shareable_type: 'module',
+                    shareable_id: moduleShareableId
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification(data.message, 'success');
+                document.getElementById('inviteEmail').value = '';
+                loadCollaborators();
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Failed to send invitation', 'error');
+        }
+    });
+
+    async function updateRole(shareId, newRole) {
+        try {
+            const response = await fetch(`/share/${shareId}/role`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ role: newRole })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification(data.message, 'success');
+            } else {
+                showNotification(data.message, 'error');
+                loadCollaborators();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Failed to update role', 'error');
+        }
+    }
+
+    async function removeCollaborator(shareId) {
+        if (!confirm('Are you sure you want to remove this collaborator?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/share/${shareId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification(data.message, 'success');
+                loadCollaborators();
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Failed to remove collaborator', 'error');
+        }
+    }
+
+    function showNotification(message, type = 'info') {
+        const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+        
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300`;
+        notification.innerHTML = `
+            <div class="flex items-center gap-2">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+</script>
+@endpush

@@ -27,7 +27,7 @@
     </div>
 
     {{-- Project Form --}}
-    <form action="{{ route('projects.update', $project) }}" method="POST">
+    <form action="{{ route('projects.update', $project) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -61,6 +61,46 @@
                     @enderror
                 </div>
 
+                {{-- Project Logo --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Project Logo</label>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <input type="file" 
+                                   name="logo" 
+                                   accept="image/*"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100" 
+                                   onchange="previewLogo(event)">
+                            <p class="text-xs text-gray-500 mt-1">Recommended: Square image, max 2MB (PNG, JPG, SVG)</p>
+                            @if($project->logo)
+                                <p class="text-xs text-green-600 mt-1">
+                                    <i class="fas fa-check-circle"></i> Current logo exists - upload new to replace
+                                </p>
+                            @endif
+                        </div>
+                        <div id="logo-preview" class="w-20 h-20 rounded-lg border-2 border-gray-200 overflow-hidden {{ $project->logo ? '' : 'hidden' }}">
+                            <img id="logo-preview-img" src="{{ $project->logo ? asset('storage/' . $project->logo) : '' }}" alt="Logo preview" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                    @error('logo')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Project URL --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Project URL</label>
+                    <input type="url" 
+                           name="url" 
+                           value="{{ old('url', $project->url) }}" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400" 
+                           placeholder="https://example.com">
+                    <p class="text-xs text-gray-500 mt-1">The URL of the application you want to test</p>
+                    @error('url')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- Status --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Status <span class="text-red-500">*</span></label>
@@ -85,4 +125,21 @@
             </div>
         </div>
     </form>
+
 @endsection
+
+@push('scripts')
+<script>
+function previewLogo(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('logo-preview').classList.remove('hidden');
+            document.getElementById('logo-preview-img').src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+}
+</script>
+@endpush

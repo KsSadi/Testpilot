@@ -396,7 +396,8 @@ class TestCaseController extends Controller
     public function savedEventsHistory(Project $project, Module $module, TestCase $testCase)
     {
         $savedEvents = $testCase->savedEvents()
-            ->orderBy('created_at', 'desc')
+            ->orderBy('event_order', 'asc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
         $data = [
@@ -808,6 +809,241 @@ class TestCaseController extends Controller
         $name = trim($name, '-');
 
         return strtolower($name);
+    }
+
+    /**
+     * Import events from another test case
+     */
+    public function importEvents(Request $request, Project $project, Module $module, TestCase $testCase)
+    {
+        $request->validate([
+            'source_test_case_id' => 'required|string'
+        ]);
+
+        try {
+            // Decode source test case hashid
+            $sourceTestCaseId = \Hashids::decode($request->source_test_case_id)[0] ?? null;
+            
+            if (!$sourceTestCaseId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid source test case ID'
+                ], 400);
+            }
+
+            // Get source test case
+            $sourceTestCase = TestCase::findOrFail($sourceTestCaseId);
+
+            // Verify source test case belongs to same project
+            if ($sourceTestCase->module->project_id !== $project->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Source test case must be from the same project'
+                ], 403);
+            }
+
+            // Get all saved events from source test case
+            $sourceEvents = TestCaseEvent::where('session_id', $sourceTestCase->session_id)
+                ->where('is_saved', true)
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            if ($sourceEvents->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No saved events found in source test case'
+                ], 404);
+            }
+
+            // Copy events to current test case
+            $importedCount = 0;
+            foreach ($sourceEvents as $sourceEvent) {
+                $newEvent = new TestCaseEvent();
+                $newEvent->session_id = $testCase->session_id;
+                $newEvent->event_type = $sourceEvent->event_type;
+                $newEvent->selector = $sourceEvent->selector;
+                $newEvent->value = $sourceEvent->value;
+                $newEvent->inner_text = $sourceEvent->inner_text;
+                $newEvent->tag_name = $sourceEvent->tag_name;
+                $newEvent->event_data = $sourceEvent->event_data;
+                $newEvent->is_saved = true; // Import as saved events
+                $newEvent->save();
+                
+                $importedCount++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully imported {$importedCount} events",
+                'imported_count' => $importedCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error importing events: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while importing events'
+            ], 500);
+        }
+    }
+
+    /**
+     * Update a saved event
+     */
+    public function updateEvent(Request $request, Project $project, Module $module, TestCase $testCase, $eventId)
+    {
+        $request->validate([
+            'selector' => 'required|string',
+            'value' => 'nullable|string',
+            'inner_text' => 'nullable|string',
+            'tag_name' => 'nullable|string',
+            'comment' => 'nullable|string'
+        ]);
+
+        try {
+            $event = TestCaseEvent::where('session_id', $testCase->session_id)
+                ->where('id', $eventId)
+                ->where('is_saved', true)
+                ->firstOrFail();
+
+            // Update event details
+            $event->selector = $request->selector;
+            $event->value = $request->value;
+            $event->inner_text = $request->inner_text;
+            $event->tag_name = $request->tag_name;
+            $event->comment = $request->comment;
+
+            // Update event_data JSON if it exists
+            if ($event->event_data) {
+                $eventData = json_decode($event->event_data, true);
+                if ($eventData) {
+                    $eventData['cypressSelector'] = $request->selector;
+                    if ($request->value) $eventData['value'] = $request->value;
+                    if ($request->inner_text) $eventData['innerText'] = $request->inner_text;
+                    if ($request->tag_name) $eventData['tagName'] = $request->tag_name;
+                    $event->event_data = json_encode($eventData);
+                }
+            }
+
+            $event->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating event: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update event'
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a single saved event
+     */
+    public function deleteEvent(Project $project, Module $module, TestCase $testCase, $eventId)
+    {
+        try {
+            $event = TestCaseEvent::where('session_id', $testCase->session_id)
+                ->where('id', $eventId)
+                ->where('is_saved', true)
+                ->firstOrFail();
+
+            $event->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error deleting event: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete event'
+            ], 500);
+        }
+    }
+
+    /**
+     * Move event up or down in order
+     */
+    public function moveEvent(Request $request, Project $project, Module $module, TestCase $testCase, $eventId)
+    {
+        $request->validate([
+            'direction' => 'required|in:up,down'
+        ]);
+
+        try {
+            // Get all saved events ordered by created_at (which determines current order)
+            $events = TestCaseEvent::where('session_id', $testCase->session_id)
+                ->where('is_saved', true)
+                ->orderBy('event_order', 'asc')
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // If no event_order set yet, initialize them
+            $needsInitialization = $events->every(function($event) {
+                return $event->event_order == 0;
+            });
+
+            if ($needsInitialization) {
+                foreach ($events as $index => $event) {
+                    $event->event_order = $index + 1;
+                    $event->save();
+                }
+                $events = $events->fresh();
+            }
+
+            // Find current event and swap with adjacent
+            $currentIndex = $events->search(function($event) use ($eventId) {
+                return $event->id == $eventId;
+            });
+
+            if ($currentIndex === false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Event not found'
+                ], 404);
+            }
+
+            $direction = $request->direction;
+            $swapIndex = $direction === 'up' ? $currentIndex - 1 : $currentIndex + 1;
+
+            if ($swapIndex < 0 || $swapIndex >= $events->count()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot move event in that direction'
+                ], 400);
+            }
+
+            // Swap event_order values
+            $currentEvent = $events[$currentIndex];
+            $swapEvent = $events[$swapIndex];
+
+            $tempOrder = $currentEvent->event_order;
+            $currentEvent->event_order = $swapEvent->event_order;
+            $swapEvent->event_order = $tempOrder;
+
+            $currentEvent->save();
+            $swapEvent->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event moved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error moving event: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to move event'
+            ], 500);
+        }
     }
 }
 

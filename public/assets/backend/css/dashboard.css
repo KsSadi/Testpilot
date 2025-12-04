@@ -239,6 +239,15 @@
     font-weight: 600;
 }
 
+.badge-purple {
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 .badge-info {
     background-color: var(--info-bg);
     color: var(--info-dark);

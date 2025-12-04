@@ -5,10 +5,11 @@ namespace App\Modules\Cypress\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasHashedRouteKey;
+use App\Traits\Shareable;
 
 class TestCase extends Model
 {
-    use HasFactory, HasHashedRouteKey;
+    use HasFactory, HasHashedRouteKey, Shareable;
 
     protected $fillable = [
         'project_id',

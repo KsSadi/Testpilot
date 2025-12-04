@@ -7,6 +7,29 @@ Route::middleware(['auth'])->group(function () {
     // Project Management Routes
     Route::resource('projects', 'ProjectController');
 
+    // Unified Sharing Routes (supports projects, modules, test cases)
+    Route::prefix('share')->name('share.')->group(function () {
+        Route::post('/', 'ShareController@store')->name('store');
+        Route::get('/', 'ShareController@index')->name('index');
+        Route::delete('/{share}', 'ShareController@destroy')->name('destroy');
+        Route::put('/{share}/role', 'ShareController@updateRole')->name('update-role');
+    });
+
+    // Invitation Routes
+    Route::prefix('invitations')->name('invitations.')->group(function () {
+        Route::get('pending', 'ShareController@pendingInvitations')->name('pending');
+        Route::post('{share}/accept', 'ShareController@accept')->name('accept');
+        Route::post('{share}/reject', 'ShareController@reject')->name('reject');
+    });
+
+    // Legacy project-specific routes (for backward compatibility)
+    Route::prefix('projects/{project}/share')->name('projects.share.')->group(function () {
+        Route::get('/', 'ProjectShareController@index')->name('index');
+        Route::post('/', 'ProjectShareController@store')->name('store');
+        Route::delete('/{share}', 'ProjectShareController@destroy')->name('destroy');
+        Route::put('/{share}/role', 'ProjectShareController@updateRole')->name('update-role');
+    });
+
     // Module Management Routes (nested under projects)
     Route::prefix('projects/{project}')->group(function () {
         Route::get('modules', 'ModuleController@index')->name('modules.index');
@@ -36,8 +59,19 @@ Route::middleware(['auth'])->group(function () {
             Route::get('test-cases/{testCase}/capture-instructions', 'TestCaseController@captureInstructions')->name('test-cases.capture-instructions');
             Route::get('test-cases/{testCase}/generate-cypress', 'TestCaseController@generateCypressCode')->name('test-cases.generate-cypress');
             Route::get('test-cases/{testCase}/download-cypress', 'TestCaseController@downloadCypressCode')->name('test-cases.download-cypress');
+            
+            // Event import routes
+            Route::post('test-cases/{testCase}/import-events', 'TestCaseController@importEvents')->name('test-cases.import-events');
+            
+            // Event management routes (edit, delete, reorder)
+            Route::put('test-cases/{testCase}/events/{eventId}/update', 'TestCaseController@updateEvent')->name('test-cases.events.update');
+            Route::delete('test-cases/{testCase}/events/{eventId}/delete', 'TestCaseController@deleteEvent')->name('test-cases.events.delete-single');
+            Route::post('test-cases/{testCase}/events/{eventId}/move', 'TestCaseController@moveEvent')->name('test-cases.events.move');
         });
     });
+
+    // Get all test cases from a project for import selection
+    Route::get('projects/{project}/test-cases-for-import', 'ProjectController@getTestCasesForImport')->name('projects.test-cases-for-import');
 
     // Original Cypress Testing Routes
     Route::get('cypress/index', 'CypressController@index')->name('cypress.index');

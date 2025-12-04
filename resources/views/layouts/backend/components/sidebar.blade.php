@@ -67,9 +67,17 @@
             </a>
             @endcan
 
+            {{-- AI Settings --}}
+            @can('edit-settings')
+            <a href="{{ route('ai.settings') }}" class="sidebar-link {{ Request::is('ai*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
+                <i class="fas fa-brain mr-3 text-lg w-5"></i>
+                <span>AI Settings</span>
+            </a>
+            @endcan
+
             {{-- Settings --}}
             @can('view-settings')
-            <a href="{{ route('settings.index') }}" class="sidebar-link {{ Request::is('settings*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
+            <a href="{{ route('settings.index') }}" class="sidebar-link {{ Request::is('settings*') && !Request::is('ai*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
                 <i class="fas fa-cog mr-3 text-lg w-5"></i>
                 <span>Settings</span>
             </a>
