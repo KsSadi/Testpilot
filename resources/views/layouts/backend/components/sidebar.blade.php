@@ -75,6 +75,59 @@
             </a>
             @endcan
 
+            {{-- Subscription (User) --}}
+            <a href="{{ route('subscription.index') }}" class="sidebar-link {{ Request::is('subscription') && !Request::is('admin/subscriptions*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
+                <i class="fas fa-crown mr-3 text-lg w-5 text-yellow-500"></i>
+                <span>My Subscription</span>
+                @if(!auth()->user()->currentSubscription || auth()->user()->currentSubscription->status === 'cancelled')
+                    <span class="ml-auto px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">Upgrade</span>
+                @endif
+            </a>
+
+            {{-- Subscription Management (Admin) --}}
+            @can('manage-subscriptions')
+            @php
+                $isSubscriptionManagementActive = Request::is('admin/subscriptions*');
+            @endphp
+            <div class="sidebar-submenu {{ $isSubscriptionManagementActive ? 'submenu-open' : '' }}">
+                <button onclick="toggleSubmenu('subscriptionMenu')" class="sidebar-link flex items-center justify-between w-full px-4 py-3 text-gray-600 rounded-xl text-base font-medium {{ $isSubscriptionManagementActive ? 'active' : '' }}">
+                    <div class="flex items-center">
+                        <i class="fas fa-credit-card mr-3 text-lg w-5"></i>
+                        <span>Subscriptions</span>
+                    </div>
+                    <i class="fas fa-chevron-down text-sm transition-transform {{ $isSubscriptionManagementActive ? 'rotate-180' : '' }}" id="subscriptionMenuIcon"></i>
+                </button>
+                <div id="subscriptionMenu" class="{{ $isSubscriptionManagementActive ? '' : 'hidden' }} mt-1 ml-8 space-y-1">
+                    <a href="{{ route('admin.subscriptions.plans.index') }}" class="sidebar-link {{ Request::is('admin/subscriptions/plans*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-box mr-3 text-base w-4"></i>
+                        <span>Plans</span>
+                    </a>
+                    <a href="{{ route('admin.subscriptions.coupons.index') }}" class="sidebar-link {{ Request::is('admin/subscriptions/coupons*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-tags mr-3 text-base w-4"></i>
+                        <span>Coupons</span>
+                    </a>
+                    <a href="{{ route('admin.subscriptions.payments.index') }}" class="sidebar-link {{ Request::is('admin/subscriptions/payments*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-money-check-alt mr-3 text-base w-4"></i>
+                        <span>Payments</span>
+                        @php
+                            $pendingPayments = \App\Modules\Subsription\Models\SubscriptionPayment::where('status', 'pending')->count();
+                        @endphp
+                        @if($pendingPayments > 0)
+                            <span class="ml-auto px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-800 rounded-full">{{ $pendingPayments }}</span>
+                        @endif
+                    </a>
+                    <a href="{{ route('admin.subscriptions.manage.index') }}" class="sidebar-link {{ Request::is('admin/subscriptions/manage*') && !Request::is('admin/subscriptions/settings*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-users-cog mr-3 text-base w-4"></i>
+                        <span>Manage Subscriptions</span>
+                    </a>
+                    <a href="{{ route('admin.subscriptions.settings.index') }}" class="sidebar-link {{ Request::is('admin/subscriptions/settings*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-cog mr-3 text-base w-4"></i>
+                        <span>Currency & Gateways</span>
+                    </a>
+                </div>
+            </div>
+            @endcan
+
             {{-- Settings with Submenu --}}
             @can('view-settings')
             @php

@@ -27,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'check.project.limit' => \App\Modules\Subsription\Http\Middleware\CheckProjectLimit::class,
+            'check.module.limit' => \App\Modules\Subsription\Http\Middleware\CheckModuleLimit::class,
+            'check.testcase.limit' => \App\Modules\Subsription\Http\Middleware\CheckTestCaseLimit::class,
+            'check.collaborator.limit' => \App\Modules\Subsription\Http\Middleware\CheckCollaboratorLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
