@@ -75,12 +75,58 @@
             </a>
             @endcan
 
-            {{-- Settings --}}
+            {{-- Settings with Submenu --}}
             @can('view-settings')
-            <a href="{{ route('settings.index') }}" class="sidebar-link {{ Request::is('settings*') && !Request::is('ai*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
-                <i class="fas fa-cog mr-3 text-lg w-5"></i>
-                <span>Settings</span>
-            </a>
+            @php
+                $isSettingsActive = Request::is('settings*') && !Request::is('ai*');
+            @endphp
+            <div class="sidebar-submenu {{ $isSettingsActive ? 'submenu-open' : '' }}">
+                <button onclick="toggleSubmenu('settingsMenu')" class="sidebar-link flex items-center justify-between w-full px-4 py-3 text-gray-600 rounded-xl text-base font-medium {{ $isSettingsActive ? 'active' : '' }}">
+                    <div class="flex items-center">
+                        <i class="fas fa-cog mr-3 text-lg w-5"></i>
+                        <span>Settings</span>
+                    </div>
+                    <i class="fas fa-chevron-down text-sm transition-transform {{ $isSettingsActive ? 'rotate-180' : '' }}" id="settingsMenuIcon"></i>
+                </button>
+                <div id="settingsMenu" class="{{ $isSettingsActive ? '' : 'hidden' }} mt-1 ml-8 space-y-1">
+                    <a href="{{ route('settings.index', ['tab' => 'general']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'general' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-cog mr-3 text-base w-4"></i>
+                        <span>General Settings</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'seo']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'seo' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-search mr-3 text-base w-4"></i>
+                        <span>SEO Settings</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'authentication']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'authentication' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-user-lock mr-3 text-base w-4"></i>
+                        <span>Authentication</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'security']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'security' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-shield-alt mr-3 text-base w-4"></i>
+                        <span>Security</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'email']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'email' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-envelope mr-3 text-base w-4"></i>
+                        <span>Email Settings</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'social']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'social' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-share-alt mr-3 text-base w-4"></i>
+                        <span>Social Media</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'notifications']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'notifications' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-bell mr-3 text-base w-4"></i>
+                        <span>Notifications</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'backup']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'backup' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-database mr-3 text-base w-4"></i>
+                        <span>Backup Settings</span>
+                    </a>
+                    <a href="{{ route('settings.index', ['tab' => 'developer']) }}" class="sidebar-link {{ Request::is('settings*') && request('tab') === 'developer' ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
+                        <i class="fas fa-code mr-3 text-base w-4"></i>
+                        <span>Developer Options</span>
+                    </a>
+                </div>
+            </div>
             @endcan
 
             {{-- Backups --}}
