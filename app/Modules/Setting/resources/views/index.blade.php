@@ -27,104 +27,8 @@
         </div>
     </div>
 
-    {{-- Success/Error Messages --}}
-    @if(session('success'))
-        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6 flex items-center">
-            <i class="fas fa-check-circle mr-2"></i>
-            <span>{{ session('success') }}</span>
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6 flex items-center">
-            <i class="fas fa-exclamation-circle mr-2"></i>
-            <span>Please fix the errors below</span>
-        </div>
-    @endif
-
-    {{-- Settings Layout with Sidebar --}}
-    <div class="flex flex-col lg:flex-row gap-6">
-        {{-- Settings Sidebar Navigation --}}
-        <div class="lg:w-64 flex-shrink-0">
-            <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden sticky top-6">
-                <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-cyan-50 to-blue-50">
-                    <h3 class="font-semibold text-gray-800 flex items-center">
-                        <i class="fas fa-sliders-h mr-2 text-cyan-600"></i>
-                        Settings Menu
-                    </h3>
-                </div>
-                <nav class="p-3">
-                    <ul class="space-y-1">
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'general']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'general' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-cog mr-3 text-base w-5 transition-transform group-hover:rotate-90 duration-500"></i>
-                                <span>General Settings</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'seo']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'seo' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-search mr-3 text-base w-5 transition-transform group-hover:scale-110 duration-300"></i>
-                                <span>SEO Settings</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'authentication']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'authentication' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-user-lock mr-3 text-base w-5 transition-transform group-hover:scale-110 duration-300"></i>
-                                <span>Authentication</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'security']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'security' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-shield-alt mr-3 text-base w-5 transition-transform group-hover:scale-110 duration-300"></i>
-                                <span>Security</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'email']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'email' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-envelope mr-3 text-base w-5 transition-transform group-hover:scale-110 duration-300"></i>
-                                <span>Email Settings</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'social']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'social' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-share-alt mr-3 text-base w-5 transition-transform group-hover:rotate-12 duration-300"></i>
-                                <span>Social Media</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'notifications']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'notifications' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-bell mr-3 text-base w-5 group-hover:animate-pulse"></i>
-                                <span>Notifications</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'backup']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'backup' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-database mr-3 text-base w-5 transition-transform group-hover:scale-110 duration-300"></i>
-                                <span>Backup Settings</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('settings.index', ['tab' => 'developer']) }}" 
-                               class="settings-nav-item {{ $activeTab === 'developer' ? 'active' : '' }} flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group">
-                                <i class="fas fa-code mr-3 text-base w-5 transition-transform group-hover:scale-110 duration-300"></i>
-                                <span>Developer Options</span>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-
-        {{-- Settings Content Area --}}
-        <div class="flex-1 min-w-0">
+    {{-- Settings Content Area (Full Width - Sidebar menu is in main sidebar) --}}
+    <div class="w-full">
             {{-- General Settings --}}
             @if($activeTab === 'general')
                 @include('Setting::tabs.general')
@@ -169,7 +73,6 @@
             @if($activeTab === 'developer')
                 @include('Setting::tabs.developer')
             @endif
-        </div>
     </div>
 @endsection
 
