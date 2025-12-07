@@ -92,7 +92,7 @@
     {{-- Plans Grid --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         @foreach($plans as $plan)
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition plan-card {{ $currentSubscription && $currentSubscription->plan_id === $plan->id ? 'ring-2 ring-blue-500' : '' }}"
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition plan-card {{ $currentSubscription && $currentSubscription->subscription_plan_id === $plan->id ? 'ring-2 ring-blue-500' : '' }}"
                  data-plan-id="{{ $plan->id }}"
                  data-plan-name="{{ $plan->name }}"
                  data-monthly-price="{{ $plan->monthly_price }}"
@@ -140,7 +140,7 @@
                         </li>
                     </ul>
 
-                    @if($currentSubscription && $currentSubscription->plan_id === $plan->id)
+                    @if($currentSubscription && $currentSubscription->subscription_plan_id === $plan->id)
                         <button class="w-full mt-6 px-4 py-3 bg-gray-200 text-gray-500 rounded-lg font-medium cursor-not-allowed">
                             Current Plan
                         </button>

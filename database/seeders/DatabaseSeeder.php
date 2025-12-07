@@ -20,6 +20,23 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
         ]);
 
+        // Seed AI Providers
+        $this->call([
+            AIProvidersSeeder::class,
+        ]);
+
+        // Seed Subscription System
+        $this->call([
+            SubscriptionPlansSeeder::class,
+            SubscriptionPermissionsSeeder::class,
+            SubscriptionCouponsSeeder::class,
+        ]);
+
+        // Seed System Settings (Currency & Payment Gateways)
+        $this->call([
+            SystemSettingsSeeder::class,
+        ]);
+
         // Create default admin user
         User::factory()->create([
             'name' => 'Admin User',

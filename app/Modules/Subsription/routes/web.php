@@ -12,6 +12,7 @@ use App\Modules\Subsription\Http\Controllers\Admin\SubscriptionController as Adm
 Route::middleware(['auth'])->group(function () {
     Route::prefix('subscription')->name('subscription.')->group(function () {
         Route::get('/', [SubscriptionController::class, 'index'])->name('index');
+        Route::get('/my-subscription', [SubscriptionController::class, 'mySubscription'])->name('my-subscription');
         Route::get('/checkout/{plan}', [SubscriptionController::class, 'checkout'])->name('checkout');
         Route::post('/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscribe');
         Route::post('/validate-coupon', [SubscriptionController::class, 'validateCoupon'])->name('validate-coupon');

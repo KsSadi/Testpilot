@@ -103,7 +103,18 @@ class SubscriptionPlansSeeder extends Seeder
         ];
 
         foreach ($plans as $plan) {
-            SubscriptionPlan::create($plan);
+            // Calculate yearly price with discount
+            if ($plan['monthly_price'] > 0 && $plan['yearly_price'] == 0 && $plan['yearly_discount_percentage'] > 0) {
+                $yearlyFullPrice = $plan['monthly_price'] * 12;
+                $plan['yearly_price'] = $yearlyFullPrice * (1 - ($plan['yearly_discount_percentage'] / 100));
+            }
+            
+            SubscriptionPlan::updateOrCreate(
+                ['slug' => $plan['slug']],
+                $plan
+            );
         }
+
+        $this->command->info('Subscription plans seeded successfully!');
     }
 }

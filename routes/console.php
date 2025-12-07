@@ -36,3 +36,14 @@ Schedule::command('backup:clean')
     ->at('03:00')
     ->name('backup:cleanup')
     ->description('Clean old backups based on retention policy');
+
+/**
+ * Check for expired subscriptions
+ * Marks subscriptions as expired and reverts users to free plan
+ */
+Schedule::command('subscriptions:check-expired')
+    ->daily()
+    ->at('00:30')
+    ->name('subscriptions:expire')
+    ->description('Check and expire subscriptions that have passed their end date');
+

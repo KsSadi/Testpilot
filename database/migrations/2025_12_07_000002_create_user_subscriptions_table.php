@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'cancelled', 'expired', 'pending', 'suspended'])->default('pending');
             
             // Payment info
-            $table->enum('payment_method', ['stripe', 'manual'])->default('stripe');
+            $table->enum('payment_method', ['stripe', 'bkash', 'nagad', 'rocket', 'bank_transfer'])->default('stripe');
             $table->string('stripe_subscription_id')->nullable();
             $table->string('transaction_id')->nullable(); // For manual payments
             

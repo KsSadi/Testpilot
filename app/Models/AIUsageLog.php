@@ -7,6 +7,8 @@ use App\Models\User;
 
 class AIUsageLog extends Model
 {
+    protected $table = 'ai_usage_logs';
+    
     protected $fillable = [
         'user_id',
         'provider',

@@ -45,7 +45,7 @@ class PaymentController extends Controller
 
         $payment->approve(auth()->user(), $request->notes);
 
-        return redirect()->route('admin.payments.index')
+        return redirect()->route('admin.subscriptions.payments.index')
             ->with('success', 'Payment approved and subscription activated!');
     }
 
@@ -57,7 +57,7 @@ class PaymentController extends Controller
 
         $payment->reject(auth()->user(), $request->reason);
 
-        return redirect()->route('admin.payments.index')
+        return redirect()->route('admin.subscriptions.payments.index')
             ->with('success', 'Payment rejected!');
     }
 }

@@ -5,7 +5,11 @@ use Illuminate\Support\Facades\Route;
 // Main Cypress testing page - Requires authentication
 Route::middleware(['auth'])->group(function () {
     // Project Management Routes
-    Route::resource('projects', 'ProjectController');
+    Route::resource('projects', 'ProjectController')->only(['index', 'show', 'edit', 'update', 'destroy']);
+    
+    // Project creation with subscription limit check
+    Route::get('projects/create', 'ProjectController@create')->name('projects.create');
+    Route::post('projects', 'ProjectController@store')->name('projects.store')->middleware('check.project.limit');
 
     // Unified Sharing Routes (supports projects, modules, test cases)
     Route::prefix('share')->name('share.')->group(function () {
@@ -34,7 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('projects/{project}')->group(function () {
         Route::get('modules', 'ModuleController@index')->name('modules.index');
         Route::get('modules/create', 'ModuleController@create')->name('modules.create');
-        Route::post('modules', 'ModuleController@store')->name('modules.store');
+        Route::post('modules', 'ModuleController@store')->name('modules.store')->middleware('check.module.limit');
         Route::get('modules/{module}', 'ModuleController@show')->name('modules.show');
         Route::get('modules/{module}/edit', 'ModuleController@edit')->name('modules.edit');
         Route::put('modules/{module}', 'ModuleController@update')->name('modules.update');
@@ -44,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('modules/{module}')->group(function () {
             Route::get('test-cases', 'TestCaseController@index')->name('test-cases.index');
             Route::get('test-cases/create', 'TestCaseController@create')->name('test-cases.create');
-            Route::post('test-cases', 'TestCaseController@store')->name('test-cases.store');
+            Route::post('test-cases', 'TestCaseController@store')->name('test-cases.store')->middleware('check.testcase.limit');
             Route::get('test-cases/{testCase}', 'TestCaseController@show')->name('test-cases.show');
             Route::get('test-cases/{testCase}/edit', 'TestCaseController@edit')->name('test-cases.edit');
             Route::put('test-cases/{testCase}', 'TestCaseController@update')->name('test-cases.update');

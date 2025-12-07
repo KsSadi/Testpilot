@@ -40,6 +40,12 @@ class RolePermissionSeeder extends Seeder
             'view-permissions',
             'assign-permissions',
             
+            // Project Management Permissions
+            'view-projects',
+            'create-projects',
+            'edit-projects',
+            'delete-projects',
+            
             // Settings Permissions
             'view-settings',
             'edit-settings',
@@ -68,6 +74,9 @@ class RolePermissionSeeder extends Seeder
             'create-users',
             'edit-users',
             'view-roles',
+            'view-projects',
+            'create-projects',
+            'edit-projects',
             'view-settings',
             'edit-settings',
             'view-reports',
@@ -80,6 +89,7 @@ class RolePermissionSeeder extends Seeder
             'view-dashboard',
             'view-users',
             'edit-users',
+            'view-projects',
             'view-reports',
         ]);
 

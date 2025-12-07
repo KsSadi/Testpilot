@@ -25,33 +25,37 @@
                 <input type="hidden" name="coupon_code" id="applied_coupon_code">
 
                 {{-- Currency Selection --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         <i class="fas fa-dollar-sign mr-2 text-blue-600"></i>
                         Select Currency
                     </h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <label class="relative flex items-center justify-center p-6 border-2 border-blue-500 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition currency-selector" data-currency="USD">
+                    <div class="flex gap-3">
+                        <label class="relative flex-1 flex items-center p-4 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition currency-selector" data-currency="USD">
                             <input type="radio" name="currency" value="USD" checked class="absolute opacity-0">
-                            <div class="text-center w-full">
-                                <div class="text-4xl mb-3">🇺🇸</div>
-                                <p class="font-bold text-gray-900 text-lg">USD ($)</p>
-                                <p class="text-sm text-gray-600 mt-1">US Dollar</p>
+                            <div class="flex items-center justify-center w-full gap-3">
+                                <div class="text-2xl">🇺🇸</div>
+                                <div class="text-left">
+                                    <p class="font-bold text-gray-900">USD ($)</p>
+                                    <p class="text-xs text-gray-600">US Dollar</p>
+                                </div>
                             </div>
                         </label>
-                        <label class="relative flex items-center justify-center p-6 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-green-50 hover:border-green-300 transition currency-selector" data-currency="BDT">
+                        <label class="relative flex-1 flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-green-50 hover:border-green-300 transition currency-selector" data-currency="BDT">
                             <input type="radio" name="currency" value="BDT" class="absolute opacity-0">
-                            <div class="text-center w-full">
-                                <div class="text-4xl mb-3">🇧🇩</div>
-                                <p class="font-bold text-gray-900 text-lg">BDT (৳)</p>
-                                <p class="text-sm text-gray-600 mt-1">Bangladeshi Taka</p>
+                            <div class="flex items-center justify-center w-full gap-3">
+                                <div class="text-2xl">🇧🇩</div>
+                                <div class="text-left">
+                                    <p class="font-bold text-gray-900">BDT (৳)</p>
+                                    <p class="text-xs text-gray-600">Bangladeshi Taka</p>
+                                </div>
                             </div>
                         </label>
                     </div>
                 </div>
 
                 {{-- Coupon Code --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         <i class="fas fa-tag mr-2 text-blue-600"></i>
                         Have a Discount Coupon?
@@ -69,7 +73,7 @@
                 </div>
 
                 {{-- Payment Method --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         <i class="fas fa-credit-card mr-2 text-blue-600"></i>
                         Payment Method

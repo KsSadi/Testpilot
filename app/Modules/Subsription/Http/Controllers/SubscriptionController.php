@@ -17,7 +17,7 @@ class SubscriptionController extends Controller
     {
         $plans = SubscriptionPlan::active()->ordered()->get();
         $currentSubscription = auth()->user()->currentSubscription;
-        $usage = $currentSubscription ? auth()->user()->getAllUsageStats() : ['projects_count' => 0, 'modules_count' => 0, 'test_cases_count' => 0, 'shared_count' => 0];
+        $usage = auth()->user()->getAllUsageStats();
 
         return view('Subsription::index', compact('plans', 'currentSubscription', 'usage'));
     }

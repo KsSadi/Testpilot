@@ -166,8 +166,10 @@ class AIProvidersSeeder extends Seeder
 
         foreach ($openaiPricing as $model => $pricing) {
             DB::table('ai_settings')->updateOrInsert(
-                ['provider_id' => $openaiProvider->id, 'key' => 'model_pricing', 'value' => $model],
+                ['key' => "pricing_{$model}"], // Unique key per model
                 [
+                    'provider_id' => $openaiProvider->id,
+                    'value' => $model,
                     'input_price' => $pricing['input'],
                     'output_price' => $pricing['output'],
                     'type' => 'pricing',
@@ -192,8 +194,10 @@ class AIProvidersSeeder extends Seeder
 
         foreach ($geminiPricing as $model => $pricing) {
             DB::table('ai_settings')->updateOrInsert(
-                ['provider_id' => $geminiProvider->id, 'key' => 'model_pricing', 'value' => $model],
+                ['key' => "pricing_{$model}"], // Unique key per model
                 [
+                    'provider_id' => $geminiProvider->id,
+                    'value' => $model,
                     'input_price' => $pricing['input'],
                     'output_price' => $pricing['output'],
                     'type' => 'pricing',
@@ -214,8 +218,10 @@ class AIProvidersSeeder extends Seeder
 
         foreach ($deepseekPricing as $model => $pricing) {
             DB::table('ai_settings')->updateOrInsert(
-                ['provider_id' => $deepseekProvider->id, 'key' => 'model_pricing', 'value' => $model],
+                ['key' => "pricing_{$model}"], // Unique key per model
                 [
+                    'provider_id' => $deepseekProvider->id,
+                    'value' => $model,
                     'input_price' => $pricing['input'],
                     'output_price' => $pricing['output'],
                     'type' => 'pricing',

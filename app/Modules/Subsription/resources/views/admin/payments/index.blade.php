@@ -23,13 +23,16 @@
         <div class="border-b border-gray-200">
             <nav class="flex space-x-6">
                 <a href="?status=pending" class="pb-4 px-1 border-b-2 font-medium text-sm {{ request('status', 'pending') === 'pending' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
-                    Pending ({{ $payments->where('status', 'pending')->count() }})
+                    Pending ({{ $pendingCount }})
                 </a>
-                <a href="?status=approved" class="pb-4 px-1 border-b-2 font-medium text-sm {{ request('status') === 'approved' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
+                <a href="?status=completed" class="pb-4 px-1 border-b-2 font-medium text-sm {{ request('status') === 'completed' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
                     Approved
                 </a>
-                <a href="?status=rejected" class="pb-4 px-1 border-b-2 font-medium text-sm {{ request('status') === 'rejected' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
+                <a href="?status=failed" class="pb-4 px-1 border-b-2 font-medium text-sm {{ request('status') === 'failed' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
                     Rejected
+                </a>
+                <a href="?" class="pb-4 px-1 border-b-2 font-medium text-sm {{ !request('status') || request('status') === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
+                    All
                 </a>
             </nav>
         </div>
@@ -96,10 +99,10 @@
 
                     <div class="ml-6 flex flex-col items-end space-y-2">
                         <span class="px-3 py-1 text-xs font-semibold rounded-full 
-                            {{ $payment->status === 'approved' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $payment->status === 'rejected' ? 'bg-red-100 text-red-800' : '' }}
+                            {{ $payment->status === 'completed' ? 'bg-green-100 text-green-800' : '' }}
+                            {{ $payment->status === 'failed' ? 'bg-red-100 text-red-800' : '' }}
                             {{ $payment->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}">
-                            {{ ucfirst($payment->status) }}
+                            {{ $payment->status === 'completed' ? 'Approved' : ucfirst($payment->status) }}
                         </span>
 
                         @if($payment->status === 'pending')

@@ -31,6 +31,7 @@
             </a>
 
             {{-- User Management with Submenu --}}
+            @can('view-users')
             @php
                 $isUserManagementActive = Request::is('members*') || Request::is('roles*') || Request::is('permissions*');
             @endphp
@@ -43,24 +44,31 @@
                     <i class="fas fa-chevron-down text-sm transition-transform {{ $isUserManagementActive ? 'rotate-180' : '' }}" id="userMenuIcon"></i>
                 </button>
                 <div id="userMenu" class="{{ $isUserManagementActive ? '' : 'hidden' }} mt-1 ml-8 space-y-1">
+                    @can('view-users')
                     <a href="{{ route('members.index') }}" class="sidebar-link {{ Request::is('members*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
                         <i class="fas fa-users mr-3 text-base w-4"></i>
                         <span>Members</span>
                     </a>
+                    @endcan
+                    @can('view-roles')
                     <a href="{{ url('/roles') }}" class="sidebar-link {{ Request::is('roles*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
                         <i class="fas fa-user-shield mr-3 text-base w-4"></i>
                         <span>Roles</span>
                     </a>
+                    @endcan
+                    @can('view-permissions')
                     <a href="{{ url('/permissions') }}" class="sidebar-link {{ Request::is('permissions*') ? 'active' : '' }} flex items-center px-4 py-2.5 text-gray-600 rounded-lg text-sm">
                         <i class="fas fa-key mr-3 text-base w-4"></i>
                         <span>Permissions</span>
                     </a>
+                    @endcan
                 </div>
             </div>
+            @endcan
 
 
             {{-- Project Management --}}
-            @can('edit-settings')
+            @can('view-projects')
             <a href="{{ route('projects.index') }}" class="sidebar-link {{ Request::is('projects*') || Request::is('test-cases*') ? 'active' : '' }} flex items-center px-4 py-3 text-gray-600 rounded-xl text-base font-medium">
                 <i class="fas fa-project-diagram mr-3 text-lg w-5"></i>
                 <span>Project</span>
@@ -218,7 +226,11 @@
                     {{ Auth::user()->name ?? 'Guest User' }}
                 </p>
                 <p class="text-sm text-gray-500 truncate">
-                    {{ Auth::user()->email ?? 'guest@example.com' }}
+                    @if(Auth::check() && Auth::user()->currentSubscription && Auth::user()->currentSubscription->status === 'active')
+                        <i class="fas fa-crown text-yellow-500 mr-1"></i>{{ Auth::user()->currentSubscription->plan->name ?? 'Free Plan' }}
+                    @else
+                        <i class="fas fa-gift text-gray-400 mr-1"></i>Free Plan
+                    @endif
                 </p>
             </div>
         </div>
