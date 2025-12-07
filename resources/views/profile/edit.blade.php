@@ -26,19 +26,6 @@
         </div>
     </div>
 
-    {{-- Success/Error Messages --}}
-    @if(session('success'))
-        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
-            <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6">
-            <i class="fas fa-exclamation-circle mr-2"></i>Please fix the errors below
-        </div>
-    @endif
-
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Avatar Section --}}
         <div class="lg:col-span-1">
@@ -56,7 +43,7 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data" class="w-full">
+                    <form action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data" class="w-full max-w-xs">
                         @csrf
                         @method('PUT')
                         
@@ -64,7 +51,7 @@
                         <input type="hidden" name="email" value="{{ $user->email }}">
                         <input type="hidden" name="mobile" value="{{ $user->mobile }}">
                         
-                        <label for="avatar" class="w-full btn-primary cursor-pointer text-center mb-2">
+                        <label for="avatar" class="w-full btn-primary cursor-pointer text-center block mb-2">
                             <i class="fas fa-upload mr-2"></i>Upload New Photo
                         </label>
                         <input type="file" id="avatar" name="avatar" accept="image/*" class="hidden" onchange="previewAvatar(event); this.form.submit();">
@@ -75,7 +62,7 @@
                     </form>
 
                     @if($user->avatar)
-                        <form action="{{ route('profile.avatar.delete') }}" method="POST" class="w-full mt-2">
+                        <form action="{{ route('profile.avatar.delete') }}" method="POST" class="w-full max-w-xs mt-2">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="w-full btn-secondary text-red-600 hover:bg-red-50" onclick="return confirm('Are you sure you want to delete your avatar?')">
