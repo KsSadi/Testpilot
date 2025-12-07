@@ -94,6 +94,27 @@
                     }
                 });
             });
+
+            // Auto-refresh CSRF token every 10 minutes to prevent 419 errors
+            // when login page is left open for a long time
+            setInterval(function() {
+                fetch('/csrf-token')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update meta tag
+                        document.querySelector('meta[name="csrf-token"]').setAttribute('content', data.csrf_token);
+                        
+                        // Update all CSRF input fields
+                        document.querySelectorAll('input[name="_token"]').forEach(input => {
+                            input.value = data.csrf_token;
+                        });
+                        
+                        console.log('CSRF token refreshed at:', new Date().toLocaleTimeString());
+                    })
+                    .catch(error => {
+                        console.error('Failed to refresh CSRF token:', error);
+                    });
+            }, 600000); // 10 minutes in milliseconds
         });
     </script>
 </body>

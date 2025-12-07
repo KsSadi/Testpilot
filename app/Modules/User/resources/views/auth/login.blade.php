@@ -1,3 +1,8 @@
+{{-- 
+    Login Page
+    - Auto-refreshes CSRF token every 10 minutes to prevent 419 errors
+    - Session lifetime: 30 days (43200 minutes)
+--}}
 @extends('User::layouts.auth')
 
 @section('title', 'Login - ' . config('app.name'))

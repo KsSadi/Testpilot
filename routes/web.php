@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
+// CSRF Token Refresh Route (for preventing 419 errors on long-open pages)
+Route::get('/csrf-token', function () {
+    return response()->json(['csrf_token' => csrf_token()]);
+});
+
 // Root route handled by DemoFrontend module
 // Route::get('/', function () {
 //     return redirect('/login');
