@@ -1003,17 +1003,42 @@ class CypressController extends Controller
                 sendEventToParent(eventData);
             });
 
-            // Capture change events (for selects, checkboxes, radios)
+            // Capture change events (for selects, checkboxes, radios, file inputs)
             document.addEventListener("change", function(e) {
                 var eventData = getElementData(e.target, "change");
                 eventData.input_type = e.target.type;
                 eventData.value = e.target.value || "";
                 eventData.checked = e.target.checked || null;
                 eventData.selected = e.target.selected || null;
+                
+                // Handle file input
+                if (e.target.type === "file" && e.target.files && e.target.files.length > 0) {
+                    eventData.type = "file_upload";
+                    eventData.fileCount = e.target.files.length;
+                    eventData.files = [];
+                    eventData.accept = e.target.accept || null;
+                    eventData.multiple = e.target.multiple || false;
+                    
+                    // Extract file metadata
+                    for (var i = 0; i < e.target.files.length; i++) {
+                        var file = e.target.files[i];
+                        eventData.files.push({
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            lastModified: file.lastModified
+                        });
+                    }
+                    
+                    console.log("File upload detected:", eventData.files);
+                }
+                
+                // Handle select dropdown
                 if (e.target.tagName === "SELECT") {
                     eventData.selectedIndex = e.target.selectedIndex;
                     eventData.selectedText = e.target.options[e.target.selectedIndex]?.text || "";
                 }
+                
                 sendEventToParent(eventData);
             });
 

@@ -42,6 +42,12 @@
                class="btn-secondary flex-1 md:flex-none text-center text-sm">
                 <i class="fas fa-arrow-left mr-2"></i>Back to Live Events
             </a>
+            @if($savedEvents->count() > 0)
+            <button onclick="clearAllSavedEvents()" 
+                    class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
+                <i class="fas fa-trash-alt mr-2"></i>Clear All
+            </button>
+            @endif
             <a href="{{ route('test-cases.generate-cypress', [$project, $module, $testCase]) }}" 
                class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
                 <i class="fas fa-code mr-2"></i>Generate Code
@@ -94,8 +100,20 @@
         <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
             <div class="flex items-center justify-between">
                 <div>
+                    <p class="text-sm text-gray-500 mb-1">File Uploads</p>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $savedEvents->where('event_type', 'file_upload')->count() }}</h3>
+                </div>
+                <div class="bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-lg p-3">
+                    <i class="fas fa-file-upload text-white text-xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
+            <div class="flex items-center justify-between">
+                <div>
                     <p class="text-sm text-gray-500 mb-1">Other Events</p>
-                    <h3 class="text-2xl font-bold text-gray-800">{{ $savedEvents->whereNotIn('event_type', ['click', 'input'])->count() }}</h3>
+                    <h3 class="text-2xl font-bold text-gray-800">{{ $savedEvents->whereNotIn('event_type', ['click', 'input', 'file_upload'])->count() }}</h3>
                 </div>
                 <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg p-3">
                     <i class="fas fa-cogs text-white text-xl"></i>
@@ -269,6 +287,46 @@
                                     <span class="text-gray-700 font-medium">
                                         "{{ Str::limit($event->inner_text, 100) }}"
                                     </span>
+                                </div>
+                            @endif
+
+                            @if($event->event_type === 'file_upload' && isset($eventData['files']))
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-blue-800">
+                                        <i class="fas fa-file-upload text-blue-600"></i>
+                                        File Upload - {{ count($eventData['files']) }} file{{ count($eventData['files']) > 1 ? 's' : '' }}
+                                    </div>
+                                    @foreach($eventData['files'] as $index => $file)
+                                        <div class="bg-white rounded p-2 text-xs space-y-1">
+                                            <div class="flex items-center justify-between">
+                                                <span class="font-semibold text-gray-800 flex items-center gap-1">
+                                                    <i class="fas fa-file text-gray-500"></i>
+                                                    {{ $file['name'] ?? 'Unknown file' }}
+                                                </span>
+                                                @if(isset($file['size']))
+                                                    <span class="text-gray-500">{{ round($file['size'] / 1024, 2) }} KB</span>
+                                                @endif
+                                            </div>
+                                            @if(isset($file['type']))
+                                                <div class="text-gray-600">
+                                                    <i class="fas fa-info-circle mr-1"></i>Type: <code class="bg-gray-100 px-1 rounded">{{ $file['type'] }}</code>
+                                                </div>
+                                            @endif
+                                            <div class="text-gray-500 font-mono">
+                                                cypress/fixtures/{{ $file['name'] ?? 'file' }}
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                    @if($eventData['multiple'] ?? false)
+                                        <div class="text-xs text-blue-700">
+                                            <i class="fas fa-check-circle mr-1"></i>Multiple files enabled
+                                        </div>
+                                    @endif
+                                    @if($eventData['accept'] ?? null)
+                                        <div class="text-xs text-blue-700">
+                                            <i class="fas fa-filter mr-1"></i>Accept: <code class="bg-blue-100 px-1 rounded">{{ $eventData['accept'] }}</code>
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
 
@@ -1088,6 +1146,57 @@ function moveEvent(eventId, direction) {
         eventCard.style.pointerEvents = 'auto';
         console.error('Error moving event:', error);
         alert('An error occurred while moving the event');
+    });
+}
+
+// Clear all saved events
+function clearAllSavedEvents() {
+    if (!confirm('⚠️ WARNING: This will permanently delete ALL saved events!\n\nThis action cannot be undone. Are you sure?')) {
+        return;
+    }
+
+    // Double confirmation for safety
+    if (!confirm('Are you absolutely sure? All {{ $savedEvents->count() }} saved events will be deleted permanently.')) {
+        return;
+    }
+
+    // Show loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
+    loadingOverlay.innerHTML = `
+        <div class="bg-white rounded-lg p-6 shadow-xl">
+            <div class="flex items-center gap-3">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                <span class="text-gray-700 font-medium">Deleting all events...</span>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+
+    fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/events/clear-all`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingOverlay.remove();
+        if (data.success) {
+            if (typeof showNotification === 'function') {
+                showNotification('success', 'Cleared!', data.message || 'All saved events deleted successfully!');
+            }
+            // Reload page to show empty state
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            alert('Error: ' + (data.message || 'Failed to clear events'));
+        }
+    })
+    .catch(error => {
+        loadingOverlay.remove();
+        console.error('Error clearing events:', error);
+        alert('An error occurred while clearing events');
     });
 }
 </script>
