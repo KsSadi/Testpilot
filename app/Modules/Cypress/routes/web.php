@@ -5,11 +5,11 @@ use Illuminate\Support\Facades\Route;
 // Main Cypress testing page - Requires authentication
 Route::middleware(['auth'])->group(function () {
     // Project Management Routes
-    Route::resource('projects', 'ProjectController')->only(['index', 'show', 'edit', 'update', 'destroy']);
-    
-    // Project creation with subscription limit check
+    // NOTE: Specific routes MUST come before resource routes to avoid conflicts
     Route::get('projects/create', 'ProjectController@create')->name('projects.create');
     Route::post('projects', 'ProjectController@store')->name('projects.store')->middleware('check.project.limit');
+    
+    Route::resource('projects', 'ProjectController')->only(['index', 'show', 'edit', 'update', 'destroy']);
 
     // Unified Sharing Routes (supports projects, modules, test cases)
     Route::prefix('share')->name('share.')->group(function () {
@@ -59,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('test-cases/{testCase}/events/clear', 'TestCaseController@clearEvents')->name('test-cases.events.clear');
             Route::post('test-cases/{testCase}/events/save', 'TestCaseController@saveEvents')->name('test-cases.events.save');
             Route::post('test-cases/{testCase}/events/delete', 'TestCaseController@deleteEvents')->name('test-cases.events.delete');
+            Route::post('test-cases/{testCase}/events/clear-all', 'TestCaseController@clearAllSavedEvents')->name('test-cases.events.clear-all');
             Route::get('test-cases/{testCase}/saved-events', 'TestCaseController@savedEventsHistory')->name('test-cases.saved-events');
             Route::get('test-cases/{testCase}/capture-instructions', 'TestCaseController@captureInstructions')->name('test-cases.capture-instructions');
             Route::get('test-cases/{testCase}/generate-cypress', 'TestCaseController@generateCypressCode')->name('test-cases.generate-cypress');

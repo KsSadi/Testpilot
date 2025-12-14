@@ -391,6 +391,20 @@ class TestCaseController extends Controller
     }
 
     /**
+     * Clear all saved events for a test case
+     */
+    public function clearAllSavedEvents(Project $project, Module $module, TestCase $testCase)
+    {
+        $deletedCount = $testCase->savedEvents()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully deleted all $deletedCount saved events",
+            'deleted' => $deletedCount
+        ]);
+    }
+
+    /**
      * Show saved events history page
      */
     public function savedEventsHistory(Project $project, Module $module, TestCase $testCase)
@@ -702,12 +716,41 @@ class TestCaseController extends Controller
 
             case 'file':
             case 'file_upload':
-                if (isset($eventData['fileNames']) && !empty($eventData['fileNames'])) {
+                if (isset($eventData['files']) && !empty($eventData['files'])) {
+                    $fileCount = count($eventData['files']);
+                    $label = $eventData['selectors']['label'] ?? '';
+                    $comment = $label ? " // {$label}" : '';
+                    
+                    if ($fileCount === 1) {
+                        $fileName = $eventData['files'][0]['name'];
+                        $fileType = $eventData['files'][0]['type'] ?? '';
+                        $fileSize = isset($eventData['files'][0]['size']) ? round($eventData['files'][0]['size'] / 1024, 2) . 'KB' : '';
+                        $escapedFileName = addslashes($fileName);
+                        
+                        $command = "    // Upload file: {$fileName} ({$fileType}, {$fileSize}){$comment}\n";
+                        $command .= "    {$getCommand}.selectFile('cypress/fixtures/{$escapedFileName}')\n";
+                    } else {
+                        $fileNames = array_map(function($file) { return $file['name']; }, $eventData['files']);
+                        $filesStr = implode(', ', array_map('addslashes', $fileNames));
+                        
+                        $command = "    // Upload {$fileCount} files: {$filesStr}{$comment}\n";
+                        $command .= "    {$getCommand}.selectFile([\n";
+                        
+                        foreach ($eventData['files'] as $index => $file) {
+                            $escapedFileName = addslashes($file['name']);
+                            $comma = ($index < $fileCount - 1) ? ',' : '';
+                            $command .= "      'cypress/fixtures/{$escapedFileName}'{$comma}\n";
+                        }
+                        
+                        $command .= "    ])\n";
+                    }
+                } else if (isset($eventData['fileNames']) && !empty($eventData['fileNames'])) {
+                    // Legacy support for old format
                     $files = implode(', ', array_map('addslashes', $eventData['fileNames']));
                     $label = $eventData['selectors']['label'] ?? '';
                     $comment = $label ? " // {$label}" : '';
                     $command = "    // File upload: {$files}{$comment}\n";
-                    $command .= "    // {$getCommand}.selectFile('path/to/file')\n";
+                    $command .= "    {$getCommand}.selectFile('cypress/fixtures/your-file')\n";
                 }
                 break;
 
