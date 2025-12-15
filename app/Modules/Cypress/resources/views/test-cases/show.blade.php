@@ -50,6 +50,10 @@
                class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
                 <i class="fas fa-book mr-2"></i>Setup Instructions
             </a>
+            <a href="{{ route('code-generator.preview', [$project, $module, $testCase]) }}" 
+               class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
+                <i class="fas fa-magic mr-2"></i>Code Generator
+            </a>
             <a href="{{ route('test-cases.generate-cypress', [$project, $module, $testCase]) }}" 
                id="generate-cypress-btn"
                class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
@@ -116,6 +120,13 @@
             </div>
         </div>
     </div>
+
+    {{-- Browser Automation Recorder (Codegen) --}}
+    @include('Cypress::test-cases.partials._recording_section', [
+        'project' => $project,
+        'module' => $module,
+        'testCase' => $testCase
+    ])
 
     {{-- Event Capture Section --}}
     <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
