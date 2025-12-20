@@ -27,11 +27,27 @@ class CodeGeneratorService
 
         // Optimize and deduplicate events
         $events = $this->deduplicateEvents($events);
+        
+        // Get the initial URL from the first event or recorder
+        $initialUrl = '';
+        foreach ($events as $event) {
+            if (isset($event['url']) && $event['url'] !== 'about:blank') {
+                $initialUrl = $event['url'];
+                break;
+            }
+        }
 
         $code = "describe('Recorded Test', () => {\n";
         $code .= "  it('should perform recorded actions', () => {\n";
+        
+        // Add initial visit only if we have a URL
+        if ($initialUrl) {
+            $code .= "    cy.visit('{$initialUrl}');\n";
+        }
 
-        $lastUrl = '';
+        $lastUrl = $initialUrl;
+        $visitedUrls = [$initialUrl];
+        
         foreach ($events as $event) {
             $eventType = $event['type'] ?? 'unknown';
             $selector = $event['selector'] ?? '';
@@ -40,69 +56,40 @@ class CodeGeneratorService
 
             switch ($eventType) {
                 case 'pageload':
-                    if ($url && $url !== 'about:blank' && $url !== $lastUrl) {
-                        $code .= "    cy.visit('{$url}');\n";
-                        $lastUrl = $url;
-                    }
+                    // Skip pageload events - already handled with initial visit
                     break;
 
                 case 'click':
                     if ($selector) {
-                        // Handle :contains():eq() selector combination
-                        if (preg_match('/^(\w+):contains\("([^"]+)"\):eq\((\d+)\)$/', $selector, $matches)) {
-                            $tag = $matches[1];
-                            $text = $matches[2];
-                            $index = $matches[3];
-                            // Use first() for index 0, eq() for others
-                            if ($index == 0) {
-                                $code .= "    cy.contains('{$tag}', '{$text}').first().click({force: true});\n";
-                            } else {
-                                $code .= "    cy.contains('{$tag}', '{$text}').eq({$index}).click({force: true});\n";
-                            }
-                        }
-                        // Handle :contains() selector - convert to cy.contains()
-                        elseif (preg_match('/^(\w+):contains\("([^"]+)"\)$/', $selector, $matches)) {
-                            $tag = $matches[1];
-                            $text = $matches[2];
-                            $code .= "    cy.contains('{$tag}', '{$text}').first().click({force: true});\n";
-                        }
-                        // Handle :eq(index) selector
-                        elseif (preg_match('/(.+):eq\((\d+)\)/', $selector, $matches)) {
-                            $baseSelector = $matches[1];
-                            $index = $matches[2];
-                            if ($index == 0) {
-                                $code .= "    cy.get('{$baseSelector}').first().click({force: true});\n";
-                            } else {
-                                $code .= "    cy.get('{$baseSelector}').eq({$index}).click({force: true});\n";
-                            }
-                        } else {
-                            $code .= "    cy.get('{$selector}').click({force: true});\n";
-                        }
+                        $code .= $this->generateClickCommand($selector);
                     }
                     break;
 
                 case 'input':
-                    if ($selector && $value) {
-                        $escapedValue = addslashes($value);
-                        // Handle :contains() selector - convert to cy.contains()
-                        if (preg_match('/^(\w+):contains\("([^"]+)"\)$/', $selector, $matches)) {
-                            $tag = $matches[1];
-                            $text = $matches[2];
-                            $code .= "    cy.contains('{$tag}', '{$text}').clear().type('{$escapedValue}');\n";
-                        }
-                        // Handle :eq(index) selector
-                        elseif (preg_match('/(.+):eq\((\d+)\)/', $selector, $matches)) {
-                            $baseSelector = $matches[1];
-                            $index = $matches[2];
-                            $code .= "    cy.get('{$baseSelector}').eq({$index}).clear().type('{$escapedValue}');\n";
+                    if ($selector && $value !== '') {
+                        // Check if it's a radio/checkbox based on event data
+                        $inputType = $event['inputType'] ?? '';
+                        if (in_array($inputType, ['radio', 'checkbox'])) {
+                            // Radio and checkbox should just be clicked, not typed into
+                            $code .= $this->generateClickCommand($selector);
                         } else {
-                            $code .= "    cy.get('{$selector}').clear().type('{$escapedValue}');\n";
+                            $code .= $this->generateInputCommand($selector, $value);
                         }
                     }
                     break;
 
                 case 'change':
-                    // Skip change events as they're handled by input
+                    // Handle change events for radio, checkbox, and select
+                    if ($selector && isset($event['inputType'])) {
+                        $inputType = $event['inputType'];
+                        if (in_array($inputType, ['radio', 'checkbox'])) {
+                            // Just click radio/checkbox
+                            $code .= $this->generateClickCommand($selector);
+                        } elseif ($inputType === 'select-one' || strtolower($event['tagName'] ?? '') === 'select') {
+                            // Handle select dropdown
+                            $code .= $this->generateSelectCommand($selector, $value);
+                        }
+                    }
                     break;
 
                 case 'submit':
@@ -112,8 +99,11 @@ class CodeGeneratorService
                     break;
 
                 case 'navigation':
-                    if ($url && $url !== 'about:blank') {
-                        $code .= "    // Navigation to: {$url}\n";
+                    // Only add navigation if it's a different URL and not about:blank
+                    if ($url && $url !== 'about:blank' && $url !== $lastUrl && !in_array($url, $visitedUrls)) {
+                        $code .= "    cy.url().should('include', '" . parse_url($url, PHP_URL_PATH) . "');\n";
+                        $visitedUrls[] = $url;
+                        $lastUrl = $url;
                     }
                     break;
             }
@@ -123,6 +113,236 @@ class CodeGeneratorService
         $code .= "});\n";
 
         return $code;
+    }
+    
+    /**
+     * Generate Cypress click command with best selector strategy
+     */
+    protected function generateClickCommand(string $selector): string
+    {
+        // Handle TEXT: prefix (custom format from event-capture.js)
+        if (preg_match('/^TEXT:(\w+):(.+)$/', $selector, $matches)) {
+            $tag = $matches[1];
+            $text = $matches[2];
+            return "    // Close any open modals first\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      const modal = \$body.find('.modal.fade.in, .modal.show, .modal[style*=\"display: block\"]');\n" .
+                   "      if (modal.length > 0) {\n" .
+                   "        const closeBtn = modal.find('.close, button.close, [data-dismiss=\"modal\"]');\n" .
+                   "        if (closeBtn.length > 0) {\n" .
+                   "          closeBtn.first().click();\n" .
+                   "          cy.wait(500);\n" .
+                   "        }\n" .
+                   "      }\n" .
+                   "    });\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$tag}:contains(\"{$text}\")').length > 0) {\n" .
+                   "        cy.contains('{$tag}', '{$text}').click({force: true});\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Handle selectors with :contains() - convert to cy.contains()
+        if (preg_match('/^(\w+):contains\("([^"]+)"\)$/', $selector, $matches)) {
+            $tag = $matches[1];
+            $text = $matches[2];
+            return "    // Close any open modals first\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      const modal = \$body.find('.modal.fade.in, .modal.show, .modal[style*=\"display: block\"]');\n" .
+                   "      if (modal.length > 0) {\n" .
+                   "        const closeBtn = modal.find('.close, button.close, [data-dismiss=\"modal\"]');\n" .
+                   "        if (closeBtn.length > 0) {\n" .
+                   "          closeBtn.first().click();\n" .
+                   "          cy.wait(500);\n" .
+                   "        }\n" .
+                   "      }\n" .
+                   "    });\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$tag}:contains(\"{$text}\")').length > 0) {\n" .
+                   "        cy.contains('{$tag}', '{$text}').click({force: true});\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Handle :nth-child() selector (convert to .eq())
+        if (preg_match('/(.+):nth-child\((\d+)\)/', $selector, $matches)) {
+            $baseSelector = $matches[1];
+            $nthChild = $matches[2];
+            $index = $nthChild - 1;
+            return "    // Close any open modals first\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      const modal = \$body.find('.modal.fade.in, .modal.show, .modal[style*=\"display: block\"]');\n" .
+                   "      if (modal.length > 0) {\n" .
+                   "        const closeBtn = modal.find('.close, button.close, [data-dismiss=\"modal\"]');\n" .
+                   "        if (closeBtn.length > 0) {\n" .
+                   "          closeBtn.first().click();\n" .
+                   "          cy.wait(500);\n" .
+                   "        }\n" .
+                   "      }\n" .
+                   "    });\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$baseSelector}').length > {$index}) {\n" .
+                   "        cy.get('{$baseSelector}').eq({$index}).click({force: true});\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Handle :eq() selector (move outside of cy.get)
+        if (preg_match('/(.+):eq\((\d+)\)/', $selector, $matches)) {
+            $baseSelector = $matches[1];
+            $index = $matches[2];
+            if ($index == 0) {
+                return "    // Close any open modals first\n" .
+                       "    cy.get('body').then(\$body => {\n" .
+                       "      const modal = \$body.find('.modal.fade.in, .modal.show, .modal[style*=\"display: block\"]');\n" .
+                       "      if (modal.length > 0) {\n" .
+                       "        const closeBtn = modal.find('.close, button.close, [data-dismiss=\"modal\"]');\n" .
+                       "        if (closeBtn.length > 0) {\n" .
+                       "          closeBtn.first().click();\n" .
+                       "          cy.wait(500);\n" .
+                       "        }\n" .
+                       "      }\n" .
+                       "    });\n" .
+                       "    cy.get('body').then(\$body => {\n" .
+                       "      if (\$body.find('{$baseSelector}').length > 0) {\n" .
+                       "        cy.get('{$baseSelector}').first().click({force: true});\n" .
+                       "        cy.wait(3000);\n" .
+                       "      }\n" .
+                       "    });\n";
+            }
+            return "    // Close any open modals first\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      const modal = \$body.find('.modal.fade.in, .modal.show, .modal[style*=\"display: block\"]');\n" .
+                   "      if (modal.length > 0) {\n" .
+                   "        const closeBtn = modal.find('.close, button.close, [data-dismiss=\"modal\"]');\n" .
+                   "        if (closeBtn.length > 0) {\n" .
+                   "          closeBtn.first().click();\n" .
+                   "          cy.wait(500);\n" .
+                   "        }\n" .
+                   "      }\n" .
+                   "    });\n" .
+                   "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$baseSelector}').length > {$index}) {\n" .
+                   "        cy.get('{$baseSelector}').eq({$index}).click({force: true});\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Handle visibility issues - check if element might be hidden
+        if (preg_match('/myModalBtn|modal.*button|hidden/i', $selector)) {
+            return "    // cy.get('{$selector}').click(); // Skipped: potentially hidden element\n";
+        }
+        
+        // Regular selector
+        return "    // Close any open modals first\n" .
+               "    cy.get('body').then(\$body => {\n" .
+               "      const modal = \$body.find('.modal.fade.in, .modal.show, .modal[style*=\"display: block\"]');\n" .
+               "      if (modal.length > 0) {\n" .
+               "        const closeBtn = modal.find('.close, button.close, [data-dismiss=\"modal\"]');\n" .
+               "        if (closeBtn.length > 0) {\n" .
+               "          closeBtn.first().click();\n" .
+               "          cy.wait(500);\n" .
+               "        }\n" .
+               "      }\n" .
+               "    });\n" .
+               "    cy.get('body').then(\$body => {\n" .
+               "      if (\$body.find('{$selector}').length > 0) {\n" .
+               "        cy.get('{$selector}').click({force: true});\n" .
+               "        cy.wait(3000);\n" .
+               "      }\n" .
+               "    });\n";
+    }
+    
+    /**
+     * Generate Cypress input/type command
+     */
+    protected function generateInputCommand(string $selector, $value): string
+    {
+        $escapedValue = addslashes($value);
+        
+        // Handle TEXT: prefix
+        if (preg_match('/^TEXT:(\w+):(.+)$/', $selector, $matches)) {
+            $tag = $matches[1];
+            $text = $matches[2];
+            return "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$tag}:contains(\"{$text}\")').length > 0) {\n" .
+                   "        cy.contains('{$tag}', '{$text}').should('be.visible').clear().type('{$escapedValue}');\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Handle selectors with :contains()
+        if (preg_match('/^(\w+):contains\("([^"]+)"\)$/', $selector, $matches)) {
+            $tag = $matches[1];
+            $text = $matches[2];
+            return "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$tag}:contains(\"{$text}\")').length > 0) {\n" .
+                   "        cy.contains('{$tag}', '{$text}').should('be.visible').clear().type('{$escapedValue}');\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Handle :nth-child() selector
+        if (preg_match('/(.+):nth-child\((\d+)\)/', $selector, $matches)) {
+            $baseSelector = $matches[1];
+            $nthChild = $matches[2];
+            $index = $nthChild - 1;
+            return "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$baseSelector}').length > {$index}) {\n" .
+                   "        cy.get('{$baseSelector}').eq({$index}).should('be.visible').clear().type('{$escapedValue}');\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Handle :eq() selector
+        if (preg_match('/(.+):eq\((\d+)\)/', $selector, $matches)) {
+            $baseSelector = $matches[1];
+            $index = $matches[2];
+            if ($index == 0) {
+                return "    cy.get('body').then(\$body => {\n" .
+                       "      if (\$body.find('{$baseSelector}').length > 0) {\n" .
+                       "        cy.get('{$baseSelector}').first().should('be.visible').clear().type('{$escapedValue}');\n" .
+                       "        cy.wait(3000);\n" .
+                       "      }\n" .
+                       "    });\n";
+            }
+            return "    cy.get('body').then(\$body => {\n" .
+                   "      if (\$body.find('{$baseSelector}').length > {$index}) {\n" .
+                   "        cy.get('{$baseSelector}').eq({$index}).should('be.visible').clear().type('{$escapedValue}');\n" .
+                   "        cy.wait(3000);\n" .
+                   "      }\n" .
+                   "    });\n";
+        }
+        
+        // Regular selector
+        return "    cy.get('body').then(\$body => {\n" .
+               "      if (\$body.find('{$selector}').length > 0) {\n" .
+               "        cy.get('{$selector}').should('be.visible').clear().type('{$escapedValue}');\n" .
+               "        cy.wait(3000);\n" .
+               "      }\n" .
+               "    });\n";
+    }
+    
+    /**
+     * Generate Cypress select command for dropdown
+     */
+    protected function generateSelectCommand(string $selector, $value): string
+    {
+        $escapedValue = addslashes($value);
+        
+        return "    cy.get('body').then(\$body => {\n" .
+               "      if (\$body.find('{$selector}').length > 0) {\n" .
+               "        cy.get('{$selector}').select('{$escapedValue}');\n" .
+               "        cy.wait(3000);\n" .
+               "      }\n" .
+               "    });\n";
     }
 
     /**
@@ -134,30 +354,61 @@ class CodeGeneratorService
         $lastEvent = null;
 
         foreach ($events as $event) {
-            // Skip duplicate pageloads
-            if ($event['type'] === 'pageload' && $lastEvent && $lastEvent['type'] === 'pageload' && 
-                ($event['url'] ?? '') === ($lastEvent['url'] ?? '')) {
+            $eventType = $event['type'] ?? '';
+            
+            // Skip all pageload events (handled separately)
+            if ($eventType === 'pageload') {
+                // But preserve the URL for initial visit
+                if (empty($deduplicated)) {
+                    $deduplicated[] = $event;
+                }
                 continue;
+            }
+            
+            // Skip navigation events that are just redirects (same domain, automatic)
+            if ($eventType === 'navigation') {
+                // Only keep if it's a significant navigation
+                $fromUrl = $event['fromUrl'] ?? '';
+                $toUrl = $event['url'] ?? '';
+                
+                if ($fromUrl && $toUrl) {
+                    $fromDomain = parse_url($fromUrl, PHP_URL_HOST);
+                    $toDomain = parse_url($toUrl, PHP_URL_HOST);
+                    
+                    // Skip if same domain redirect (likely automatic)
+                    if ($fromDomain === $toDomain) {
+                        continue;
+                    }
+                }
             }
 
             // Merge consecutive input/change on same element - keep the last value
             if ($lastEvent && 
-                in_array($event['type'], ['input', 'change']) && 
-                in_array($lastEvent['type'], ['input', 'change']) &&
+                in_array($eventType, ['input', 'change']) && 
+                in_array($lastEvent['type'] ?? '', ['input', 'change']) &&
                 ($event['selector'] ?? '') === ($lastEvent['selector'] ?? '')) {
                 // Update the value in last event instead of adding new
-                $lastEvent['value'] = $event['value'];
-                $lastEvent['type'] = 'input'; // Prefer input
+                $deduplicated[count($deduplicated) - 1]['value'] = $event['value'];
+                $deduplicated[count($deduplicated) - 1]['type'] = 'input'; // Prefer input
+                $lastEvent = $deduplicated[count($deduplicated) - 1];
                 continue;
             }
 
-            // Skip click on input field if immediately followed by input (redundant)
+            // Skip click on input/select field if immediately followed by input/change (redundant)
             if ($lastEvent && 
-                $lastEvent['type'] === 'click' && 
-                $event['type'] === 'input' &&
+                ($lastEvent['type'] ?? '') === 'click' && 
+                in_array($eventType, ['input', 'change']) &&
                 ($event['selector'] ?? '') === ($lastEvent['selector'] ?? '')) {
                 // Remove the click from deduplicated array
                 array_pop($deduplicated);
+            }
+            
+            // Skip duplicate clicks on same element within short time
+            if ($lastEvent &&
+                ($lastEvent['type'] ?? '') === 'click' &&
+                $eventType === 'click' &&
+                ($event['selector'] ?? '') === ($lastEvent['selector'] ?? '')) {
+                continue;
             }
 
             $deduplicated[] = $event;

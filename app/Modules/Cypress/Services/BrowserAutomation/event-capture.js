@@ -14,88 +14,122 @@
 
     // Helper: Generate optimal selector for element
     function getSelector(element) {
-        // Priority: data-testid > id > name > aria-label > unique class > text content > position
+        // Priority: data-testid > id > name > aria-label > unique class > text content > nth-child
         
+        // 1. data-testid (best practice for testing)
         if (element.getAttribute('data-testid')) {
             return `[data-testid="${element.getAttribute('data-testid')}"]`;
         }
         
+        // 2. ID (unique and fast)
         if (element.id) {
             return `#${element.id}`;
         }
         
+        // 3. Name attribute (common for forms)
         if (element.name && isUnique(`[name="${element.name}"]`)) {
             return `[name="${element.name}"]`;
         }
         
+        // 4. Placeholder for inputs
+        const placeholder = element.getAttribute('placeholder');
+        if (placeholder && isUnique(`[placeholder="${placeholder}"]`)) {
+            return `[placeholder="${placeholder}"]`;
+        }
+        
+        // 5. aria-label
         if (element.getAttribute('aria-label') && isUnique(`[aria-label="${element.getAttribute('aria-label')}"]`)) {
             return `[aria-label="${element.getAttribute('aria-label')}"]`;
         }
         
-        // Try text content for buttons/links
+        // 6. For buttons/links, try text content (without index)
         const text = element.textContent?.trim();
-        if ((element.tagName === 'BUTTON' || element.tagName === 'A') && text && text.length < 50) {
-            // Count how many elements match this text
+        if ((element.tagName === 'BUTTON' || element.tagName === 'A') && text && text.length < 50 && text.length > 0) {
+            const escapedText = text.replace(/"/g, '\\"').replace(/'/g, "\\'");
             const matchingByText = Array.from(document.querySelectorAll(element.tagName.toLowerCase())).filter(
                 el => el.textContent?.trim() === text
             );
             
+            // Only use text selector if it's unique
             if (matchingByText.length === 1) {
-                return `${element.tagName.toLowerCase()}:contains("${text.replace(/"/g, '\\"')}")`;
-            } else if (matchingByText.length > 1) {
-                // Multiple matches, add index
-                const index = matchingByText.indexOf(element);
-                if (index >= 0) {
-                    return `${element.tagName.toLowerCase()}:contains("${text.replace(/"/g, '\\"')}"):eq(${index})`;
-                }
+                return `TEXT:${element.tagName.toLowerCase()}:${escapedText}`;
             }
         }
         
-        // Try class combination
+        // 7. Try unique class combination
         if (element.className && typeof element.className === 'string') {
-            const classes = element.className.trim().split(/\s+/).filter(c => c && !c.startsWith('ng-') && !c.startsWith('_'));
+            const classes = element.className.trim().split(/\s+/).filter(c => 
+                c && !c.startsWith('ng-') && !c.startsWith('_') && !c.match(/^(active|disabled|hover|focus)$/)
+            );
+            
+            // Try full class combination
             if (classes.length > 0 && classes.length <= 4) {
                 const classSelector = `.${classes.join('.')}`;
                 if (isUnique(classSelector)) {
                     return classSelector;
                 }
-                
-                // If not unique, add :eq(index) to make it specific
-                const matchingElements = document.querySelectorAll(classSelector);
-                if (matchingElements.length > 1) {
-                    const index = Array.from(matchingElements).indexOf(element);
-                    if (index >= 0) {
-                        return `${classSelector}:eq(${index})`;
+            }
+            
+            // Try single most specific class
+            if (classes.length > 0) {
+                for (const cls of classes) {
+                    const selector = `.${cls}`;
+                    if (isUnique(selector)) {
+                        return selector;
                     }
                 }
             }
         }
         
-        // Fallback: use tag with parent context
+        // 8. Type attribute for inputs
+        if (element.type && element.tagName === 'INPUT') {
+            const selector = `input[type="${element.type}"]`;
+            if (isUnique(selector)) {
+                return selector;
+            }
+        }
+        
+        // 9. Parent context with nth-child (more reliable than eq)
         const tag = element.tagName.toLowerCase();
         const parent = element.parentElement;
         if (parent) {
-            const parentSelector = parent.id ? `#${parent.id}` : 
-                                  parent.className ? `.${parent.className.trim().split(/\s+/)[0]}` : 
-                                  parent.tagName.toLowerCase();
             const siblings = Array.from(parent.children).filter(e => e.tagName === element.tagName);
             if (siblings.length > 1) {
                 const index = siblings.indexOf(element);
-                return `${parentSelector} > ${tag}:eq(${index})`;
+                const nthChild = index + 1;
+                
+                // Use parent's ID or class
+                let parentSelector = '';
+                if (parent.id) {
+                    parentSelector = `#${parent.id}`;
+                } else if (parent.className && typeof parent.className === 'string') {
+                    const parentClass = parent.className.trim().split(/\s+/)[0];
+                    if (parentClass) {
+                        parentSelector = `.${parentClass}`;
+                    }
+                }
+                
+                if (parentSelector) {
+                    return `${parentSelector} > ${tag}:nth-child(${nthChild})`;
+                }
             }
-            return `${parentSelector} > ${tag}`;
+            
+            // Simple parent > child if unique
+            if (parent.id) {
+                const selector = `#${parent.id} > ${tag}`;
+                if (isUnique(selector)) {
+                    return selector;
+                }
+            }
         }
         
+        // 10. Fallback: tag name (least specific, but better than nothing)
         return tag;
     }
 
     // Helper: Check if selector is unique
     function isUnique(selector) {
         try {
-            // Handle :contains() pseudo-selector (not standard CSS)
-            if (selector.includes(':contains(')) {
-                return true; // Cypress supports this, assume unique for now
-            }
             const elements = document.querySelectorAll(selector);
             return elements.length === 1;
         } catch (e) {
@@ -128,6 +162,16 @@
         console.log('[EVENT_CAPTURED]' + JSON.stringify(eventData));
     }
 
+    // Helper: Check if element is visible
+    function isElementVisible(element) {
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               style.opacity !== '0' &&
+               element.offsetWidth > 0 && 
+               element.offsetHeight > 0;
+    }
+
     // Track last input to avoid duplicates
     let lastInput = { element: null, value: '', time: 0 };
 
@@ -136,6 +180,13 @@
         if (e.target.closest('[data-recorder-ignore]')) return;
         
         const element = e.target;
+        
+        // Skip clicks on hidden elements (they shouldn't be clickable anyway)
+        if (!isElementVisible(element)) {
+            console.log('[RECORDER] Skipped hidden element:', element);
+            return;
+        }
+        
         captureEvent({
             type: 'click',
             selector: getSelector(element),
@@ -194,25 +245,34 @@
         });
     }, true);
 
-    // Navigation events
+    // Navigation events - only capture when URL actually changes
     let lastUrl = window.location.href;
+    let isFirstLoad = true;
+    
     setInterval(() => {
-        if (window.location.href !== lastUrl) {
-            captureEvent({
-                type: 'navigation',
-                url: window.location.href,
-                fromUrl: lastUrl
-            });
-            lastUrl = window.location.href;
+        const currentUrl = window.location.href;
+        if (currentUrl !== lastUrl) {
+            // Don't capture the very first page load, user will set it manually
+            if (!isFirstLoad) {
+                captureEvent({
+                    type: 'navigation',
+                    url: currentUrl,
+                    fromUrl: lastUrl
+                });
+            }
+            lastUrl = currentUrl;
+            isFirstLoad = false;
         }
     }, 500);
 
-    // Page load
-    captureEvent({
-        type: 'pageload',
-        url: window.location.href,
-        title: document.title
-    });
+    // Store initial URL but don't capture as event
+    // User will add cy.visit() manually at the start
+    window.__recorder = {
+        initialUrl: window.location.href,
+        getEvents: () => events,
+        getEventCount: () => events.length,
+        clearEvents: () => events.length = 0
+    };
 
     // Helper: Generate XPath for element
     function getXPath(element) {
@@ -276,11 +336,7 @@
     });
 
     // Expose global functions for debugging
-    window.__recorder = {
-        getEvents: () => events,
-        getEventCount: () => events.length,
-        clearEvents: () => events.length = 0
-    };
-
+    // Removed duplicate declaration, already set above
+    
     console.log('[RECORDER] Ready to capture events');
 })();
