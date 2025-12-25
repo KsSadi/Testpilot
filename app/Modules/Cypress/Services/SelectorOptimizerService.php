@@ -8,79 +8,27 @@ class SelectorOptimizerService
 {
     /**
      * Optimize selector for Cypress/Playwright usage
-     * Priority: data-testid > data-cy > id > name > aria-label > class > xpath
+     * STRICT Priority: ID first, then XPath fallback only
      */
     public function optimizeSelector(TestCaseEvent $event): string
     {
         $attributes = $event->attributes ?? [];
         
-        // Priority 1: data-testid attribute
-        if (isset($attributes['data-testid'])) {
-            return '[data-testid="' . $attributes['data-testid'] . '"]';
-        }
-
-        // Priority 2: data-cy attribute (Cypress specific)
-        if (isset($attributes['data-cy'])) {
-            return '[data-cy="' . $attributes['data-cy'] . '"]';
-        }
-
-        // Priority 3: ID attribute
+        // Priority 1: ID attribute (primary and preferred method)
         if (isset($attributes['id']) && !empty($attributes['id'])) {
             return '#' . $attributes['id'];
         }
 
-        // Priority 4: Name attribute (for form elements)
-        if (isset($attributes['name']) && !empty($attributes['name'])) {
-            $tagName = strtolower($event->tag_name ?? '');
-            if (in_array($tagName, ['input', 'select', 'textarea', 'button'])) {
-                return '[name="' . $attributes['name'] . '"]';
-            }
+        // Priority 2: XPath (fallback when no ID exists)
+        // Use stored XPath from event or generate one
+        if (!empty($event->xpath)) {
+            return 'XPATH:' . $event->xpath;
         }
-
-        // Priority 5: aria-label (for accessibility)
-        if (isset($attributes['aria-label']) && !empty($attributes['aria-label'])) {
-            return '[aria-label="' . $attributes['aria-label'] . '"]';
-        }
-
-        // Priority 6: Type + Placeholder for inputs
-        if (isset($attributes['type']) && isset($attributes['placeholder'])) {
-            $type = $attributes['type'];
-            $placeholder = $attributes['placeholder'];
-            return 'input[type="' . $type . '"][placeholder="' . $placeholder . '"]';
-        }
-
-        // Priority 7: Button text content
-        $tagName = strtolower($event->tag_name ?? '');
-        if ($tagName === 'button' && !empty($event->inner_text)) {
-            $text = trim($event->inner_text);
-            if (strlen($text) < 50) { // Only use short text
-                return 'button:contains("' . addslashes($text) . '")';
-            }
-        }
-
-        // Priority 8: Link text for anchors
-        if ($tagName === 'a' && !empty($event->inner_text)) {
-            $text = trim($event->inner_text);
-            if (strlen($text) < 50) {
-                return 'a:contains("' . addslashes($text) . '")';
-            }
-        }
-
-        // Priority 9: Class names (filter out dynamic/random classes)
-        if (isset($attributes['class']) && !empty($attributes['class'])) {
-            $classes = $this->filterStableClasses($attributes['class']);
-            if (!empty($classes)) {
-                return '.' . implode('.', $classes);
-            }
-        }
-
-        // Priority 10: Fall back to stored selector or tag name
-        if (!empty($event->selector)) {
-            return $event->selector;
-        }
-
-        // Last resort: tag name
-        return strtolower($event->tag_name ?? 'div');
+        
+        // If no XPath stored, generate one based on tag name and position
+        // This is a fallback and should rarely happen with proper event capture
+        $tagName = strtolower($event->tag_name ?? 'div');
+        return 'XPATH://' . $tagName . '[1]'; // Generic XPath - needs improvement in actual DOM
     }
 
     /**

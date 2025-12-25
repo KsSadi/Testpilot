@@ -13,128 +13,23 @@
     let eventCounter = 0;
 
     // Helper: Generate optimal selector for element
+    // STRICT PRIORITY: ID first, then XPath fallback only
     function getSelector(element) {
-        // Priority: data-testid > id > name > aria-label > unique class > text content > nth-child
+        console.log(`[RECORDER] getSelector called for:`, element.tagName, element.textContent?.trim().substring(0, 50));
         
-        // 1. data-testid (best practice for testing)
-        if (element.getAttribute('data-testid')) {
-            return `[data-testid="${element.getAttribute('data-testid')}"]`;
+        // Priority 1: ID attribute (primary selector - preferred method)
+        if (element.id && element.id.trim() !== '') {
+            const idSelector = `#${element.id}`;
+            console.log(`[RECORDER] Using ID selector:`, idSelector);
+            return idSelector;
         }
         
-        // 2. ID (unique and fast)
-        if (element.id) {
-            return `#${element.id}`;
-        }
-        
-        // 3. Name attribute (common for forms)
-        if (element.name && isUnique(`[name="${element.name}"]`)) {
-            return `[name="${element.name}"]`;
-        }
-        
-        // 4. Placeholder for inputs
-        const placeholder = element.getAttribute('placeholder');
-        if (placeholder && isUnique(`[placeholder="${placeholder}"]`)) {
-            return `[placeholder="${placeholder}"]`;
-        }
-        
-        // 5. aria-label
-        if (element.getAttribute('aria-label') && isUnique(`[aria-label="${element.getAttribute('aria-label')}"]`)) {
-            return `[aria-label="${element.getAttribute('aria-label')}"]`;
-        }
-        
-        // 6. For buttons/links, try text content (without index)
-        const text = element.textContent?.trim();
-        if ((element.tagName === 'BUTTON' || element.tagName === 'A') && text && text.length < 50 && text.length > 0) {
-            const escapedText = text.replace(/"/g, '\\"').replace(/'/g, "\\'");
-            const matchingByText = Array.from(document.querySelectorAll(element.tagName.toLowerCase())).filter(
-                el => el.textContent?.trim() === text
-            );
-            
-            // Only use text selector if it's unique
-            if (matchingByText.length === 1) {
-                return `TEXT:${element.tagName.toLowerCase()}:${escapedText}`;
-            }
-        }
-        
-        // 7. Try unique class combination
-        if (element.className && typeof element.className === 'string') {
-            const classes = element.className.trim().split(/\s+/).filter(c => 
-                c && !c.startsWith('ng-') && !c.startsWith('_') && !c.match(/^(active|disabled|hover|focus)$/)
-            );
-            
-            // Try full class combination
-            if (classes.length > 0 && classes.length <= 4) {
-                const classSelector = `.${classes.join('.')}`;
-                if (isUnique(classSelector)) {
-                    return classSelector;
-                }
-            }
-            
-            // Try single most specific class
-            if (classes.length > 0) {
-                for (const cls of classes) {
-                    const selector = `.${cls}`;
-                    if (isUnique(selector)) {
-                        return selector;
-                    }
-                }
-            }
-        }
-        
-        // 8. Type attribute for inputs
-        if (element.type && element.tagName === 'INPUT') {
-            const selector = `input[type="${element.type}"]`;
-            if (isUnique(selector)) {
-                return selector;
-            }
-        }
-        
-        // 9. Parent context with nth-child (more reliable than eq)
-        const tag = element.tagName.toLowerCase();
-        const parent = element.parentElement;
-        if (parent) {
-            const siblings = Array.from(parent.children).filter(e => e.tagName === element.tagName);
-            if (siblings.length > 1) {
-                const index = siblings.indexOf(element);
-                const nthChild = index + 1;
-                
-                // Use parent's ID or class
-                let parentSelector = '';
-                if (parent.id) {
-                    parentSelector = `#${parent.id}`;
-                } else if (parent.className && typeof parent.className === 'string') {
-                    const parentClass = parent.className.trim().split(/\s+/)[0];
-                    if (parentClass) {
-                        parentSelector = `.${parentClass}`;
-                    }
-                }
-                
-                if (parentSelector) {
-                    return `${parentSelector} > ${tag}:nth-child(${nthChild})`;
-                }
-            }
-            
-            // Simple parent > child if unique
-            if (parent.id) {
-                const selector = `#${parent.id} > ${tag}`;
-                if (isUnique(selector)) {
-                    return selector;
-                }
-            }
-        }
-        
-        // 10. Fallback: tag name (least specific, but better than nothing)
-        return tag;
-    }
-
-    // Helper: Check if selector is unique
-    function isUnique(selector) {
-        try {
-            const elements = document.querySelectorAll(selector);
-            return elements.length === 1;
-        } catch (e) {
-            return false;
-        }
+        // Priority 2: XPath (fallback when no ID exists)
+        // XPath provides a unique path to the element
+        const xpath = getXPath(element);
+        const xpathSelector = `XPATH:${xpath}`;
+        console.log(`[RECORDER] No ID found, using XPath selector:`, xpathSelector);
+        return xpathSelector;
     }
 
     // Helper: Get element text
@@ -244,16 +139,49 @@
             xpath: getXPath(element)
         });
     }, true);
+    
+    // Capture Enter key presses (important for form submissions)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const element = e.target;
+            // Only capture if it's in an input field or form
+            if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                captureEvent({
+                    type: 'keypress',
+                    key: 'Enter',
+                    selector: getSelector(element),
+                    tagName: element.tagName.toLowerCase(),
+                    attributes: getElementAttributes(element),
+                    xpath: getXPath(element)
+                });
+            }
+        }
+    }, true);
 
-    // Navigation events - only capture when URL actually changes
+    // Navigation events - using Navigation Timing API for better accuracy
     let lastUrl = window.location.href;
     let isFirstLoad = true;
     
+    // Method 1: Use navigation event (more reliable)
+    window.addEventListener('popstate', () => {
+        const currentUrl = window.location.href;
+        if (currentUrl !== lastUrl && !isFirstLoad) {
+            captureEvent({
+                type: 'navigation',
+                url: currentUrl,
+                fromUrl: lastUrl
+            });
+            lastUrl = currentUrl;
+        }
+    });
+    
+    // Method 2: Poll for URL changes (fallback for programmatic navigation)
     setInterval(() => {
         const currentUrl = window.location.href;
         if (currentUrl !== lastUrl) {
             // Don't capture the very first page load, user will set it manually
             if (!isFirstLoad) {
+                console.log(`[RECORDER] Navigation detected: ${lastUrl} → ${currentUrl}`);
                 captureEvent({
                     type: 'navigation',
                     url: currentUrl,
@@ -263,7 +191,7 @@
             lastUrl = currentUrl;
             isFirstLoad = false;
         }
-    }, 500);
+    }, 300); // Reduced interval for faster detection
 
     // Store initial URL but don't capture as event
     // User will add cy.visit() manually at the start

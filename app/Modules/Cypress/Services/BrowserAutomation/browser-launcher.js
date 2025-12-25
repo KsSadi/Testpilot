@@ -80,12 +80,80 @@ app.post('/start', async (req, res) => {
         // Set user agent to avoid detection
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
 
-        // Inject event capture script on every page
+        // Track new targets (popups, new tabs) and inject script
+        browser.on('targetcreated', async (target) => {
+            if (target.type() === 'page') {
+                try {
+                    const newPage = await target.page();
+                    if (newPage) {
+                        console.log(`New page opened: ${target.url()}`);
+                        await newPage.evaluateOnNewDocument(captureScript);
+                        
+                        // Add same console listener for new pages
+                        newPage.on('console', async (msg) => {
+                            const text = msg.text();
+                            if (text.startsWith('[RECORDER]')) {
+                                console.log(text);
+                            }
+                            if (text.startsWith('[EVENT_CAPTURED]')) {
+                                try {
+                                    const eventData = JSON.parse(text.replace('[EVENT_CAPTURED]', ''));
+                                    session.events.push(eventData);
+                                    if (session.ws && session.ws.readyState === 1) {
+                                        session.ws.send(JSON.stringify({
+                                            type: 'event',
+                                            data: eventData
+                                        }));
+                                    }
+                                    console.log(`✓ Event captured from new page: ${eventData.type}`);
+                                } catch (e) {
+                                    console.error('Failed to parse event from new page:', e);
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error handling new target:', e);
+                }
+            }
+        });
+
+        // Inject event capture script on every page (including cross-origin navigations)
         await page.evaluateOnNewDocument(captureScript);
+
+        // Track all frames and inject script into iframes/cross-origin frames
+        page.on('framenavigated', async (frame) => {
+            try {
+                // Re-inject script on every frame navigation (including cross-origin)
+                await frame.evaluate(captureScript).catch(err => {
+                    // Silently fail for cross-origin frames (expected)
+                    console.log(`Cannot inject into frame (likely cross-origin): ${frame.url()}`);
+                });
+                console.log(`Frame navigated: ${frame.url()}`);
+            } catch (e) {
+                // Expected for cross-origin frames
+            }
+        });
+
+        // Also inject on every page load/reload
+        page.on('load', async () => {
+            try {
+                await page.evaluate(captureScript);
+                console.log(`Script re-injected after page load: ${page.url()}`);
+            } catch (e) {
+                console.error('Failed to re-inject script:', e.message);
+            }
+        });
 
         // Listen for console messages from injected script
         page.on('console', async (msg) => {
             const text = msg.text();
+            
+            // Log all recorder messages for debugging
+            if (text.startsWith('[RECORDER]')) {
+                console.log(text);
+            }
+            
             if (text.startsWith('[EVENT_CAPTURED]')) {
                 try {
                     const eventData = JSON.parse(text.replace('[EVENT_CAPTURED]', ''));
@@ -99,7 +167,7 @@ app.post('/start', async (req, res) => {
                         }));
                     }
 
-                    console.log(`Event captured: ${eventData.type} on ${eventData.selector}`);
+                    console.log(`✓ Event captured: ${eventData.type} on ${eventData.selector || eventData.url}`);
                 } catch (e) {
                     console.error('Failed to parse event:', e);
                 }
