@@ -75,4 +75,14 @@ return [
         'redirect' => env('GITHUB_REDIRECT_URL', '/auth/github/callback'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Browser Automation Service (Codegen)
+    |--------------------------------------------------------------------------
+    */
+    'browser_automation' => [
+        'url' => env('BROWSER_AUTOMATION_URL', 'http://localhost:3031'),
+        'timeout' => env('BROWSER_AUTOMATION_TIMEOUT', 30),
+    ],
+
 ];

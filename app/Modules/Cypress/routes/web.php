@@ -72,7 +72,30 @@ Route::middleware(['auth'])->group(function () {
             Route::put('test-cases/{testCase}/events/{eventId}/update', 'TestCaseController@updateEvent')->name('test-cases.events.update');
             Route::delete('test-cases/{testCase}/events/{eventId}/delete', 'TestCaseController@deleteEvent')->name('test-cases.events.delete-single');
             Route::post('test-cases/{testCase}/events/{eventId}/move', 'TestCaseController@moveEvent')->name('test-cases.events.move');
+
+            // Code Generator Routes (Playwright-style)
+            Route::prefix('test-cases/{testCase}/code-generator')->name('code-generator.')->group(function () {
+                Route::get('preview', 'CodeGeneratorController@preview')->name('preview');
+                Route::get('download', 'CodeGeneratorController@download')->name('download');
+                Route::post('generate', 'CodeGeneratorController@generate')->name('generate');
+                Route::get('live-preview', 'CodeGeneratorController@livePreview')->name('live-preview');
+                Route::get('events/{eventId}/selectors', 'CodeGeneratorController@suggestSelectors')->name('suggest-selectors');
+                Route::get('events/{eventId}/optimize', 'CodeGeneratorController@optimizeSelector')->name('optimize-selector');
+                Route::post('validate-selector', 'CodeGeneratorController@validateSelector')->name('validate-selector');
+            });
+
+            // Browser Automation Routes (Codegen - Auto-launch browser)
+            Route::prefix('test-cases/{testCase}/recording')->name('recording.')->group(function () {
+                Route::post('start', 'RecordingController@start')->name('start');
+                Route::post('stop', 'RecordingController@stop')->name('stop');
+                Route::get('events/{sessionId}', 'RecordingController@getEvents')->name('events');
+                Route::post('generate-code', 'RecordingController@generateCode')->name('generate-code');
+                Route::post('save-code', 'RecordingController@saveCode')->name('save-code');
+            });
         });
+
+        // Module-level code generator routes
+        Route::post('modules/{module}/export-suite', 'CodeGeneratorController@exportSuite')->name('modules.export-suite');
     });
 
     // Get all test cases from a project for import selection
@@ -107,3 +130,5 @@ Route::get('cypress/cypress-auto-capture.user.js', function() {
 // Accept all HTTP methods (GET, POST, PUT, DELETE, etc.) for AJAX requests
 Route::match(['get', 'post', 'put', 'delete', 'patch', 'options'], 'cypress/proxy', 'CypressController@proxyWebsite')->name('cypress.proxy');
 
+// Browser Automation Health Check (NO auth required)
+Route::get('recording/health', 'RecordingController@healthCheck')->name('recording.health');

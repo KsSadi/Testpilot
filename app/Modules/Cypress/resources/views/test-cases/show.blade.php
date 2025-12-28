@@ -41,7 +41,7 @@
             <a href="{{ route('modules.show', [$project, $module]) }}" class="btn-secondary flex-1 md:flex-none text-center text-sm">
                 <i class="fas fa-arrow-left mr-2"></i>Back
             </a>
-            @if($testCase->created_by === auth()->id())
+            {{-- @if($testCase->created_by === auth()->id())
             <button onclick="openTestCaseShareModal()" class="btn-secondary flex-1 md:flex-none text-center text-sm bg-purple-500 text-white hover:bg-purple-600">
                 <i class="fas fa-share-alt mr-2"></i>Share
             </button>
@@ -50,6 +50,10 @@
                class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
                 <i class="fas fa-book mr-2"></i>Setup Instructions
             </a>
+            <a href="{{ route('code-generator.preview', [$project, $module, $testCase]) }}" 
+               class="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
+                <i class="fas fa-magic mr-2"></i>Code Generator
+            </a>
             <a href="{{ route('test-cases.generate-cypress', [$project, $module, $testCase]) }}" 
                id="generate-cypress-btn"
                class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition duration-200 shadow-sm hover:shadow flex-1 md:flex-none text-center text-sm">
@@ -57,12 +61,12 @@
             </a>
             <a href="{{ route('test-cases.edit', [$project, $module, $testCase]) }}" class="btn-warning flex-1 md:flex-none text-center text-sm">
                 <i class="fas fa-edit mr-2"></i>Edit
-            </a>
+            </a> --}}
         </div>
     </div>
 
     {{-- Stats Cards --}}
-    <div class="stats-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {{-- <div class="stats-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm card-hover">
             <div class="flex items-center justify-between">
                 <div>
@@ -115,10 +119,17 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
+
+    {{-- Browser Automation Recorder (Codegen) --}}
+    @include('Cypress::test-cases.partials._recording_section', [
+        'project' => $project,
+        'module' => $module,
+        'testCase' => $testCase
+    ])
 
     {{-- Event Capture Section --}}
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
+    {{-- <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-5 border-b border-gray-100 gap-3">
             <div>
                 <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -171,7 +182,6 @@
             </div>
         </div>
 
-        {{-- Live Events Monitor (Unsaved Only) --}}
         <div id="monitor-unsaved" class="p-5 max-h-[700px] overflow-y-auto bg-white">
             <div class="text-center py-16 text-gray-400">
                 <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4 opacity-20">
@@ -191,7 +201,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> --}}
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -209,7 +219,7 @@
 @endpush
 
 @push('scripts')
-<script>
+{{-- <script>
 const sessionId = '{{ $testCase->session_id }}';
 let pollingInterval = null;
 let lastEventCount = 0;
@@ -986,14 +996,13 @@ function showShareNotification(message, type = 'info') {
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
-</script>
+</script> --}}
 @endpush
 
 {{-- Test Case Share Modal --}}
-<div id="testCaseShareModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 overflow-y-auto">
+{{-- <div id="testCaseShareModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen px-4 py-6">
         <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <!-- Modal Header -->
             <div class="flex items-center justify-between p-6 border-b border-gray-200">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">Share Test Case</h3>
@@ -1004,7 +1013,6 @@ function showShareNotification(message, type = 'info') {
                 </button>
             </div>
 
-            <!-- Invite Form -->
             <div class="p-6 border-b border-gray-200">
                 <form id="testCaseInviteForm" class="flex gap-3">
                     <input type="email" id="testCaseInviteEmail" placeholder="Enter email address" 
@@ -1019,7 +1027,6 @@ function showShareNotification(message, type = 'info') {
                 </form>
             </div>
 
-            <!-- Collaborators List -->
             <div class="p-6">
                 <h4 class="font-semibold text-gray-800 mb-4">Collaborators</h4>
                 <div id="testCaseCollaboratorsList" class="space-y-3">
@@ -1030,6 +1037,6 @@ function showShareNotification(message, type = 'info') {
             </div>
         </div>
     </div>
-</div>
+</div> --}}
 
 @endsection
