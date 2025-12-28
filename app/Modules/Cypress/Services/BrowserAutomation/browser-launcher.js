@@ -80,37 +80,28 @@ app.post('/start', async (req, res) => {
         // Set user agent to avoid detection
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
 
-        // Track new targets (popups, new tabs) and inject script
+        // PREVENT NEW TABS: Intercept new page creation and redirect to main page
         browser.on('targetcreated', async (target) => {
             if (target.type() === 'page') {
                 try {
                     const newPage = await target.page();
-                    if (newPage) {
-                        console.log(`New page opened: ${target.url()}`);
-                        await newPage.evaluateOnNewDocument(captureScript);
+                    if (newPage && newPage !== session.page) {
+                        const newUrl = target.url();
+                        console.log(`[RECORDER] New tab detected, redirecting main page to: ${newUrl}`);
                         
-                        // Add same console listener for new pages
-                        newPage.on('console', async (msg) => {
-                            const text = msg.text();
-                            if (text.startsWith('[RECORDER]')) {
-                                console.log(text);
-                            }
-                            if (text.startsWith('[EVENT_CAPTURED]')) {
-                                try {
-                                    const eventData = JSON.parse(text.replace('[EVENT_CAPTURED]', ''));
-                                    session.events.push(eventData);
-                                    if (session.ws && session.ws.readyState === 1) {
-                                        session.ws.send(JSON.stringify({
-                                            type: 'event',
-                                            data: eventData
-                                        }));
-                                    }
-                                    console.log(`✓ Event captured from new page: ${eventData.type}`);
-                                } catch (e) {
-                                    console.error('Failed to parse event from new page:', e);
-                                }
-                            }
+                        // Navigate the main page to this URL instead
+                        if (newUrl && newUrl !== 'about:blank') {
+                            await session.page.goto(newUrl, { waitUntil: 'domcontentloaded' }).catch(err => {
+                                console.error('Error navigating main page:', err);
+                            });
+                        }
+                        
+                        // Close the new tab immediately
+                        await newPage.close().catch(err => {
+                            console.error('Error closing new tab:', err);
                         });
+                        
+                        console.log(`[RECORDER] New tab closed, navigation handled in main page`);
                     }
                 } catch (e) {
                     console.error('Error handling new target:', e);

@@ -12,23 +12,115 @@
     const events = [];
     let eventCounter = 0;
 
+    // PREVENT NEW TABS: Remove target="_blank" from all links
+    function preventNewTabs() {
+        // Remove target="_blank" from all existing links
+        document.querySelectorAll('a[target="_blank"], a[target="_new"]').forEach(link => {
+            link.removeAttribute('target');
+            console.log('[RECORDER] Removed target attribute from link:', link.href);
+        });
+
+        // Override window.open to navigate in same tab instead
+        const originalOpen = window.open;
+        window.open = function(url, target, features) {
+            if (url) {
+                console.log('[RECORDER] Intercepted window.open, navigating in same tab:', url);
+                window.location.href = url;
+                return window;
+            }
+            return originalOpen.call(window, url, target, features);
+        };
+
+        console.log('[RECORDER] New tab prevention activated');
+    }
+
+    // Run immediately and on DOM changes
+    preventNewTabs();
+
+    // Watch for dynamically added links with target="_blank"
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1) { // Element node
+                    if (node.tagName === 'A' && (node.target === '_blank' || node.target === '_new')) {
+                        node.removeAttribute('target');
+                        console.log('[RECORDER] Removed target from dynamically added link:', node.href);
+                    }
+                    // Check children too
+                    if (node.querySelectorAll) {
+                        node.querySelectorAll('a[target="_blank"], a[target="_new"]').forEach(link => {
+                            link.removeAttribute('target');
+                            console.log('[RECORDER] Removed target from nested link:', link.href);
+                        });
+                    }
+                }
+            });
+        });
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+
     // Helper: Generate optimal selector for element
-    // STRICT PRIORITY: ID first, then XPath fallback only
+    // PRIORITY: ID > data-testid > name > aria-label > text content > XPath
     function getSelector(element) {
         console.log(`[RECORDER] getSelector called for:`, element.tagName, element.textContent?.trim().substring(0, 50));
         
-        // Priority 1: ID attribute (primary selector - preferred method)
+        // Priority 1: ID attribute (most reliable)
         if (element.id && element.id.trim() !== '') {
             const idSelector = `#${element.id}`;
             console.log(`[RECORDER] Using ID selector:`, idSelector);
             return idSelector;
         }
         
-        // Priority 2: XPath (fallback when no ID exists)
-        // XPath provides a unique path to the element
+        // Priority 2: data-testid attribute
+        if (element.getAttribute('data-testid')) {
+            const testId = element.getAttribute('data-testid');
+            const selector = `[data-testid="${testId}"]`;
+            console.log(`[RECORDER] Using data-testid selector:`, selector);
+            return selector;
+        }
+        
+        // Priority 3: name attribute (for form elements)
+        if (element.name && element.name.trim() !== '') {
+            const nameSelector = `[name="${element.name}"]`;
+            console.log(`[RECORDER] Using name selector:`, nameSelector);
+            return nameSelector;
+        }
+        
+        // Priority 4: aria-label attribute
+        if (element.getAttribute('aria-label')) {
+            const ariaLabel = element.getAttribute('aria-label');
+            const selector = `[aria-label="${ariaLabel}"]`;
+            console.log(`[RECORDER] Using aria-label selector:`, selector);
+            return selector;
+        }
+        
+        // Priority 5: Text content for links and buttons
+        if ((element.tagName === 'A' || element.tagName === 'BUTTON') && element.textContent.trim()) {
+            const text = element.textContent.trim();
+            const tag = element.tagName.toLowerCase();
+            const selector = `TEXT:${tag}:${text}`;
+            console.log(`[RECORDER] Using text selector:`, selector);
+            return selector;
+        }
+        
+        // Priority 6: Class-based selector (if classes exist and seem unique)
+        if (element.className && typeof element.className === 'string' && element.className.trim()) {
+            const classes = element.className.trim().split(/\s+/).filter(c => c && !c.match(/^(ng-|active|focus|hover)/));
+            if (classes.length > 0 && classes.length <= 3) {
+                const classSelector = element.tagName.toLowerCase() + '.' + classes.join('.');
+                console.log(`[RECORDER] Using class selector:`, classSelector);
+                return classSelector;
+            }
+        }
+        
+        // Priority 7: XPath (last resort fallback)
         const xpath = getXPath(element);
         const xpathSelector = `XPATH:${xpath}`;
-        console.log(`[RECORDER] No ID found, using XPath selector:`, xpathSelector);
+        console.log(`[RECORDER] Using XPath selector (fallback):`, xpathSelector);
         return xpathSelector;
     }
 
@@ -76,6 +168,13 @@
         
         const element = e.target;
         
+        // Additional safety: remove target from clicked links
+        const link = element.closest('a');
+        if (link && (link.target === '_blank' || link.target === '_new')) {
+            link.removeAttribute('target');
+            console.log('[RECORDER] Removed target on click:', link.href);
+        }
+        
         // Skip clicks on hidden elements (they shouldn't be clickable anyway)
         if (!isElementVisible(element)) {
             console.log('[RECORDER] Skipped hidden element:', element);
@@ -98,6 +197,12 @@
         const value = element.value;
         const now = Date.now();
         
+        // Skip hidden elements
+        if (!isElementVisible(element)) {
+            console.log('[RECORDER] Skipped hidden input element:', element);
+            return;
+        }
+        
         // Debounce: only capture if different element or 1 second passed
         if (lastInput.element !== element || now - lastInput.time > 1000) {
             captureEvent({
@@ -117,6 +222,12 @@
     // Change events (select, checkbox, radio)
     document.addEventListener('change', (e) => {
         const element = e.target;
+        
+        // Skip hidden elements
+        if (!isElementVisible(element)) {
+            console.log('[RECORDER] Skipped hidden change element:', element);
+            return;
+        }
         
         let value;
         if (element.type === 'checkbox') {
