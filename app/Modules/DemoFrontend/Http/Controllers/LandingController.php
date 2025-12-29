@@ -106,7 +106,9 @@ class LandingController
             ],
         ];
 
-        return view('DemoFrontend::landing', compact('features', 'stats', 'authMethods'));
+        // return view('DemoFrontend::landing', compact('features', 'stats', 'authMethods'));
+        return view('DemoFrontend::landing_v2', compact('features', 'stats', 'authMethods'));
+
     }
 
     /**
