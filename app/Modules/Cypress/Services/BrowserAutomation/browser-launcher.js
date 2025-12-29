@@ -165,6 +165,22 @@ app.post('/start', async (req, res) => {
             }
         });
 
+        // Handle browser close (when user manually closes the browser)
+        browser.on('disconnected', () => {
+            console.log(`Browser closed manually for session: ${sessionId}`);
+            session.browserClosed = true;
+            session.stopped = true;
+            session.stoppedAt = Date.now();
+            
+            // Notify via WebSocket if connected
+            if (session.ws && session.ws.readyState === 1) {
+                session.ws.send(JSON.stringify({
+                    type: 'browser_closed',
+                    message: 'Browser was closed manually'
+                }));
+            }
+        });
+
         // Handle page close
         page.on('close', () => {
             console.log(`Page closed for session: ${sessionId} - session will remain active`);

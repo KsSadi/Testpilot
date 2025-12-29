@@ -1,12 +1,12 @@
 {{-- Browser Automation Recorder (Codegen Style) --}}
-<div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 shadow-lg mb-6" id="recording-section">
+<div class="primary-color rounded-xl p-6 shadow-lg mb-6" id="recording-section">
     <div class="flex items-center justify-between mb-4">
         <div>
             <h3 class="text-xl font-bold text-white flex items-center gap-2">
                 <i class="fas fa-robot"></i>
                 Auto Recorder (Codegen)
             </h3>
-            <p class="text-indigo-100 text-sm mt-1">Launch browser automatically and record your interactions</p>
+            <p class="text-white/80 text-sm mt-1">Launch browser automatically and record your interactions</p>
         </div>
         <div id="service-status" class="flex items-center gap-2">
             <span class="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-sm">
@@ -26,7 +26,7 @@
                 <input type="url" 
                        id="recording-url" 
                        placeholder="https://example.com" 
-                       value="https://www.google.com"
+                       value="{{ $project->url ?? 'https://' }}"
                        class="w-full px-4 py-2.5 rounded-lg border-2 border-white/30 bg-white/20 text-white placeholder-white/60 focus:outline-none focus:border-white/60 transition">
             </div>
             <button id="start-recording-btn" 
@@ -76,26 +76,59 @@
         </div>
     </div>
 
-    {{-- Generated Code Preview --}}
-    <div id="code-preview-section" style="display: none;" class="bg-white/10 backdrop-blur rounded-lg p-4 mt-4">
+    {{-- Captured Events Section (After Recording Stops) --}}
+    <div id="captured-events-section" style="display: none;" class="bg-white/10 backdrop-blur rounded-lg p-4 mt-4">
         <div class="flex items-center justify-between mb-3">
             <h4 class="text-white font-semibold flex items-center gap-2">
-                <i class="fas fa-code"></i>
-                Generated Cypress Code
+                <i class="fas fa-list-alt"></i>
+                Captured Events (<span id="captured-events-total">0</span>)
             </h4>
             <div class="flex items-center gap-2">
-                <button onclick="copyGeneratedCode()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-sm transition">
-                    <i class="fas fa-copy mr-1"></i> Copy
+                <button id="toggle-events-btn" onclick="toggleEventsTable()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-sm transition">
+                    <i class="fas fa-eye mr-1"></i> <span id="toggle-events-text">Show Events</span>
                 </button>
-                <button onclick="downloadGeneratedCode()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-sm transition">
-                    <i class="fas fa-download mr-1"></i> Download
+                <button onclick="exportEventsJson()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-sm transition">
+                    <i class="fas fa-download mr-1"></i> Export JSON
                 </button>
-                <button onclick="saveGeneratedCode()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm transition">
-                    <i class="fas fa-save mr-1"></i> Save to Test Case
+                <button id="save-events-btn" onclick="saveEventsOnly()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-1.5 rounded text-sm transition font-medium">
+                    <i class="fas fa-save mr-1"></i> Save Events
                 </button>
             </div>
         </div>
-        <pre class="bg-black/40 rounded-lg p-4 overflow-x-auto"><code id="generated-code" class="text-green-300 text-sm font-mono"></code></pre>
+        
+        {{-- Events Table (Initially Hidden) --}}
+        <div id="events-table-container" style="display: none;" class="bg-black/30 rounded-lg overflow-hidden">
+            <table class="w-full text-sm text-white">
+                <thead class="bg-black/40 text-white/80">
+                    <tr>
+                        <th class="px-4 py-2 text-left">#</th>
+                        <th class="px-4 py-2 text-left">Type</th>
+                        <th class="px-4 py-2 text-left">Selector/URL</th>
+                        <th class="px-4 py-2 text-left">Value</th>
+                        <th class="px-4 py-2 text-left">Time</th>
+                    </tr>
+                </thead>
+                <tbody id="events-table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{-- Generate Code Button (After Saving Events) --}}
+    <div id="generate-code-section" style="display: none;" class="bg-white/10 backdrop-blur rounded-lg p-4 mt-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h4 class="text-white font-semibold flex items-center gap-2">
+                    <i class="fas fa-check-circle text-green-400"></i>
+                    Events Saved Successfully!
+                </h4>
+                <p class="text-white/70 text-sm mt-1">You can now generate Cypress test code from your captured events.</p>
+            </div>
+            <a id="open-code-generator-btn" href="#" class="bg-white hover:bg-white/90 text-cyan-600 font-semibold px-6 py-2.5 rounded-lg transition duration-200 shadow-lg flex items-center gap-2">
+                <i class="fas fa-code"></i>
+                <span>Generate Code</span>
+            </a>
+        </div>
     </div>
 </div>
 
@@ -118,6 +151,8 @@ async function checkServiceHealth() {
         const data = await response.json();
         
         const statusEl = document.getElementById('service-status');
+        const startBtn = document.getElementById('start-recording-btn');
+        
         if (data.serviceStatus === 'running') {
             statusEl.innerHTML = `
                 <span class="inline-flex items-center gap-2 bg-green-500/80 px-3 py-1 rounded-full text-sm">
@@ -125,6 +160,12 @@ async function checkServiceHealth() {
                     <span class="text-white font-medium">Service Online</span>
                 </span>
             `;
+            // Enable the start recording button
+            if (startBtn && !recordingSessionId) {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                startBtn.title = '';
+            }
         } else {
             statusEl.innerHTML = `
                 <span class="inline-flex items-center gap-2 bg-red-500/80 px-3 py-1 rounded-full text-sm">
@@ -132,9 +173,22 @@ async function checkServiceHealth() {
                     <span class="text-white font-medium">Service Offline</span>
                 </span>
             `;
+            // Disable the start recording button
+            if (startBtn) {
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                startBtn.title = 'Service is offline. Run: npm run recorder';
+            }
         }
     } catch (error) {
         console.error('Health check failed:', error);
+        // Disable button on error
+        const startBtn = document.getElementById('start-recording-btn');
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            startBtn.title = 'Cannot connect to service. Run: npm run recorder';
+        }
     }
 }
 
@@ -258,6 +312,10 @@ function connectWebSocket(wsUrl) {
             const data = JSON.parse(event.data);
             if (data.type === 'event') {
                 addEventToFeed(data.data);
+            } else if (data.type === 'browser_closed') {
+                // Browser was closed manually - auto stop recording
+                console.log('Browser closed manually - triggering auto stop');
+                handleBrowserClosedAutomatically();
             }
         };
         
@@ -388,8 +446,8 @@ async function stopRecording() {
         const data = await response.json();
         
         if (data.success) {
-            // Generate code
-            await generateCode();
+            // Show captured events section (NO auto-generate code)
+            showCapturedEventsSection();
             
             // Update UI
             document.getElementById('start-recording-btn').style.display = 'flex';
@@ -397,6 +455,7 @@ async function stopRecording() {
             document.getElementById('start-recording-btn').innerHTML = '<i class="fas fa-play mr-2"></i>Start Recording';
             document.getElementById('stop-recording-btn').style.display = 'none';
             document.getElementById('recording-url').disabled = false;
+            document.getElementById('recording-status').style.display = 'none';
             
             // Clear timers
             clearInterval(recordingInterval);
@@ -406,7 +465,7 @@ async function stopRecording() {
                 wsConnection.close();
             }
             
-            showNotification('Recording stopped! Code generated successfully.', 'success');
+            showNotification('Recording stopped! Review your captured events.', 'success');
             
         } else {
             alert('Failed to stop recording');
@@ -421,113 +480,180 @@ async function stopRecording() {
     }
 }
 
-async function generateCode() {
-    if (!recordingSessionId) {
-        console.error('No recording session ID');
+async function handleBrowserClosedAutomatically() {
+    if (!recordingSessionId) return;
+    
+    console.log('Handling automatic browser close...');
+    
+    // Update UI immediately
+    document.getElementById('start-recording-btn').style.display = 'flex';
+    document.getElementById('start-recording-btn').disabled = false;
+    document.getElementById('start-recording-btn').innerHTML = '<i class="fas fa-play mr-2"></i>Start Recording';
+    document.getElementById('stop-recording-btn').style.display = 'none';
+    document.getElementById('recording-url').disabled = false;
+    document.getElementById('recording-status').style.display = 'none';
+    
+    // Clear timers
+    if (recordingInterval) {
+        clearInterval(recordingInterval);
+        recordingInterval = null;
+    }
+    
+    // Show captured events section (NO auto-generate code)
+    showCapturedEventsSection();
+    showNotification('Browser closed. Review your captured events.', 'info');
+    
+    // Keep session ID for events reference
+    // recordingSessionId = null; // Don't reset yet
+    recordingStartTime = null;
+}
+
+function showCapturedEventsSection() {
+    const section = document.getElementById('captured-events-section');
+    section.style.display = 'block';
+    
+    // Update total count
+    document.getElementById('captured-events-total').textContent = capturedEvents.length;
+    
+    // Populate the events table
+    populateEventsTable();
+}
+
+function populateEventsTable() {
+    const tbody = document.getElementById('events-table-body');
+    tbody.innerHTML = '';
+    
+    capturedEvents.forEach((event, index) => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-white/10 hover:bg-white/5';
+        
+        let typeIcon = 'fa-mouse-pointer';
+        let typeColor = 'text-blue-300';
+        
+        switch(event.type) {
+            case 'click': typeIcon = 'fa-mouse-pointer'; typeColor = 'text-blue-300'; break;
+            case 'input': typeIcon = 'fa-keyboard'; typeColor = 'text-yellow-300'; break;
+            case 'change': typeIcon = 'fa-exchange-alt'; typeColor = 'text-purple-300'; break;
+            case 'navigation': typeIcon = 'fa-compass'; typeColor = 'text-pink-300'; break;
+        }
+        
+        const timestamp = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : '-';
+        
+        row.innerHTML = `
+            <td class="px-4 py-2 text-white/60">${index + 1}</td>
+            <td class="px-4 py-2">
+                <span class="${typeColor}"><i class="fas ${typeIcon} mr-1"></i>${event.type}</span>
+            </td>
+            <td class="px-4 py-2 text-white/80 font-mono text-xs max-w-xs truncate" title="${event.selector || event.url || '-'}">${event.selector || event.url || '-'}</td>
+            <td class="px-4 py-2 text-white/60 max-w-xs truncate" title="${event.value || '-'}">${event.value || '-'}</td>
+            <td class="px-4 py-2 text-white/60">${timestamp}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function toggleEventsTable() {
+    const container = document.getElementById('events-table-container');
+    const btnText = document.getElementById('toggle-events-text');
+    const btn = document.getElementById('toggle-events-btn');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        btnText.textContent = 'Hide Events';
+        btn.querySelector('i').className = 'fas fa-eye-slash mr-1';
+    } else {
+        container.style.display = 'none';
+        btnText.textContent = 'Show Events';
+        btn.querySelector('i').className = 'fas fa-eye mr-1';
+    }
+}
+
+function exportEventsJson() {
+    const dataStr = JSON.stringify(capturedEvents, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '{{ $testCase->name }}_events.json';
+    a.click();
+    showNotification('Events exported!', 'success');
+}
+
+async function saveEventsOnly() {
+    if (capturedEvents.length === 0) {
+        alert('No events to save');
         return;
     }
     
     const urlPath = window.location.pathname;
     const urlMatch = urlPath.match(/\/projects\/([^\/]+)\/modules\/([^\/]+)\/test-cases\/([^\/]+)/);
     if (!urlMatch) {
-        console.error('Could not extract URL parameters');
+        alert('Could not determine test case ID');
         return;
     }
     
     const [, projectId, moduleId, testCaseId] = urlMatch;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     
-    console.log('🔧 Generating code...', {
-        sessionId: recordingSessionId,
-        url: `/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/generate-code`
-    });
+    const saveBtn = document.getElementById('save-events-btn');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
     
     try {
-        const response = await fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/generate-code`, {
+        const response = await fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/save-events`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
+            credentials: 'same-origin',
             body: JSON.stringify({
-                session_id: recordingSessionId
+                session_id: recordingSessionId || 'manual',
+                events: capturedEvents
             })
         });
         
-        console.log('📡 Response status:', response.status);
-        const data = await response.json();
-        console.log('📦 Response data:', data);
-        
-        if (data.success) {
-            console.log('✅ Code generated successfully');
-            document.getElementById('generated-code').textContent = data.code;
-            document.getElementById('code-preview-section').style.display = 'block';
-        } else {
-            console.error('❌ Code generation failed:', data.message);
-            alert('Failed to generate code: ' + (data.message || 'Unknown error'));
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Server returned HTML instead of JSON:', text.substring(0, 500));
+            throw new Error('Server error. Please check if you are logged in.');
         }
-        
-    } catch (error) {
-        console.error('💥 Code generation error:', error);
-        alert('Error generating code: ' + error.message);
-    }
-}
-
-function copyGeneratedCode() {
-    const code = document.getElementById('generated-code').textContent;
-    navigator.clipboard.writeText(code);
-    showNotification('Code copied to clipboard!', 'success');
-}
-
-function downloadGeneratedCode() {
-    const code = document.getElementById('generated-code').textContent;
-    const blob = new Blob([code], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '{{ $testCase->name }}.cy.js';
-    a.click();
-    showNotification('Code downloaded!', 'success');
-}
-
-async function saveGeneratedCode() {
-    const code = document.getElementById('generated-code').textContent;
-    
-    const urlPath = window.location.pathname;
-    const urlMatch = urlPath.match(/\/projects\/([^\/]+)\/modules\/([^\/]+)\/test-cases\/([^\/]+)/);
-    if (!urlMatch) return;
-    
-    const [, projectId, moduleId, testCaseId] = urlMatch;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    
-    try {
-        const response = await fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/save-code`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify({
-                test_case_id: testCaseId,
-                code: code,
-                session_id: recordingSessionId
-            })
-        });
         
         const data = await response.json();
         
         if (data.success) {
-            showNotification('Code saved to test case!', 'success');
-            setTimeout(() => location.reload(), 1500);
+            // Show version info in notification
+            const versionInfo = data.event_session ? ` as ${data.event_session.version_label}` : '';
+            showNotification(`${data.events_saved} events saved${versionInfo}!`, 'success');
+            
+            // Hide the save button and show Generate Code section
+            document.getElementById('captured-events-section').style.display = 'none';
+            document.getElementById('generate-code-section').style.display = 'block';
+            
+            // Set the code generator URL with session param if available
+            let codeGeneratorUrl = `/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/code-generator`;
+            if (data.event_session && data.event_session.id) {
+                codeGeneratorUrl += `?session=${data.event_session.id}`;
+            }
+            document.getElementById('open-code-generator-btn').href = codeGeneratorUrl;
+            
+            // Reset session
+            recordingSessionId = null;
+            
         } else {
-            alert('Failed to save code');
+            alert('Failed to save events: ' + (data.message || 'Unknown error'));
         }
         
     } catch (error) {
-        console.error('Save code error:', error);
-        alert('Error saving code: ' + error.message);
+        console.error('Save events error:', error);
+        alert('Error saving events: ' + error.message);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i> Save Events';
     }
 }
 

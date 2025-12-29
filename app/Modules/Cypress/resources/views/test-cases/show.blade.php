@@ -128,6 +128,93 @@
         'testCase' => $testCase
     ])
 
+    {{-- Recording Sessions Section (Versioned Events) --}}
+    @php
+        $eventSessions = \App\Modules\Cypress\Models\EventSession::where('test_case_id', $testCase->id)
+            ->orderBy('version', 'desc')
+            ->get();
+    @endphp
+    @if($eventSessions->count() > 0)
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm mb-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-5 border-b border-gray-100 gap-3">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-layer-group text-cyan-600"></i>
+                    Recording Sessions
+                </h3>
+                <p class="text-sm text-gray-500 mt-1">{{ $eventSessions->count() }} session(s) with {{ $eventSessions->sum('events_count') }} total events</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <a href="{{ route('code-generator.index', [$project, $module, $testCase]) }}" class="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition text-sm shadow-sm">
+                    <i class="fas fa-code mr-1"></i> Open Code Generator
+                </a>
+            </div>
+        </div>
+        <div class="p-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach($eventSessions as $session)
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200 hover:border-cyan-300 hover:shadow-md transition group">
+                    <div class="flex items-start justify-between mb-3">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">{{ $session->version_label }}</h4>
+                            <p class="text-xs text-gray-500">
+                                <i class="fas fa-clock mr-1"></i>{{ $session->formatted_recorded_at }}
+                            </p>
+                        </div>
+                        <span class="bg-cyan-100 text-cyan-700 px-2 py-1 rounded-full text-xs font-medium">
+                            {{ $session->events_count }} events
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('code-generator.index', [$project, $module, $testCase]) }}?session={{ $session->hash_id }}" 
+                           class="flex-1 bg-white border border-gray-300 hover:border-cyan-400 hover:bg-cyan-50 text-gray-700 px-3 py-1.5 rounded text-xs text-center transition">
+                            <i class="fas fa-code mr-1"></i> Generate Code
+                        </a>
+                        <button onclick="deleteSessionFromShow('{{ $session->hash_id }}')" 
+                                class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition" 
+                                title="Delete Session">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    <script>
+    async function deleteSessionFromShow(sessionId) {
+        if (!confirm('Delete this recording session? All events in this session will be permanently deleted.')) {
+            return;
+        }
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        try {
+            const response = await fetch('{{ url("") }}/projects/{{ $project->hash_id }}/modules/{{ $module->hash_id }}/test-cases/{{ $testCase->hash_id }}/event-sessions/' + sessionId + '/delete', {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Failed to delete session');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('Error deleting session: ' + error.message);
+        }
+    }
+    </script>
+    @endif
+
     {{-- Event Capture Section --}}
     {{-- <div class="bg-white rounded-xl border border-gray-100 shadow-sm">
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between p-5 border-b border-gray-100 gap-3">

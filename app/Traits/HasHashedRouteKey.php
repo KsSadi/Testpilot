@@ -47,4 +47,12 @@ trait HasHashedRouteKey
     {
         return Hashids::encode($this->getKey());
     }
+
+    /**
+     * Get the hash_id attribute (accessor)
+     */
+    public function getHashIdAttribute()
+    {
+        return Hashids::encode($this->getKey());
+    }
 }

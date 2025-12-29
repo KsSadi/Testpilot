@@ -1,5 +1,5 @@
 {{-- Sidebar Component --}}
-<aside class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col" id="sidebar">
+<aside class="w-72 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col" id="sidebar">
     {{-- Logo Section --}}
     <div class="p-5 border-b border-gray-100">
         <div class="flex items-center space-x-3">

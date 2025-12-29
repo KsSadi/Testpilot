@@ -91,9 +91,22 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('events/{sessionId}', 'RecordingController@getEvents')->name('events');
                 Route::post('generate-code', 'RecordingController@generateCode')->name('generate-code');
                 Route::post('save-code', 'RecordingController@saveCode')->name('save-code');
+                Route::post('save-events', 'RecordingController@saveEventsOnly')->name('save-events');
             });
+            
+            // Code Generator Page (New Workflow)
+            Route::get('test-cases/{testCase}/code-generator', 'RecordingController@codeGeneratorPage')->name('code-generator.index');
+            Route::post('test-cases/{testCase}/code-generator/generate', 'RecordingController@generateAndStoreCode')->name('code-generator.generate');
+            Route::post('test-cases/{testCase}/code-generator/generate-ai', 'RecordingController@generateWithAI')->name('code-generator.generate-ai');
+            Route::delete('test-cases/{testCase}/code-generator/{generatedCode}/delete', 'RecordingController@deleteGeneratedCode')->name('code-generator.delete');
+            
+            // Event Session Routes (Versioned Events)
+            Route::delete('test-cases/{testCase}/event-sessions/{eventSession}/delete', 'RecordingController@deleteEventSession')->name('event-sessions.delete');
+            
+            // Clear saved generated code
+            Route::post('test-cases/{testCase}/clear-code', 'RecordingController@clearCode')->name('test-cases.clear-code');
         });
-
+        
         // Module-level code generator routes
         Route::post('modules/{module}/export-suite', 'CodeGeneratorController@exportSuite')->name('modules.export-suite');
     });

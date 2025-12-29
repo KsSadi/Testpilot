@@ -20,7 +20,8 @@ class TestCase extends Model
         'order',
         'session_id',
         'session_data',
-        'status'
+        'status',
+        'generated_code'
     ];
 
     protected static function boot()
@@ -63,6 +64,22 @@ class TestCase extends Model
     public function events()
     {
         return $this->hasMany(TestCaseEvent::class, 'session_id', 'session_id');
+    }
+
+    /**
+     * Get all generated codes for this test case
+     */
+    public function generatedCodes()
+    {
+        return $this->hasMany(GeneratedCode::class)->orderBy('generated_at', 'desc');
+    }
+
+    /**
+     * Get the latest generated code
+     */
+    public function latestGeneratedCode()
+    {
+        return $this->hasOne(GeneratedCode::class)->latestOfMany('generated_at');
     }
 
     public function savedEvents()

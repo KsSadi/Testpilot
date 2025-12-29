@@ -11,6 +11,7 @@ class TestCaseEvent extends Model
 
     protected $fillable = [
         'session_id',
+        'event_session_id',
         'event_type',
         'selector',
         'tag_name',
@@ -30,9 +31,20 @@ class TestCaseEvent extends Model
         'updated_at' => 'datetime',
     ];
 
+    /**
+     * Get the test case (via session_id - legacy support)
+     */
     public function testCase()
     {
         return $this->belongsTo(TestCase::class, 'session_id', 'session_id');
+    }
+
+    /**
+     * Get the event session this event belongs to
+     */
+    public function eventSession()
+    {
+        return $this->belongsTo(EventSession::class, 'event_session_id');
     }
 
     public function scopeSaved($query)
@@ -48,5 +60,10 @@ class TestCaseEvent extends Model
     public function scopeBySession($query, $sessionId)
     {
         return $query->where('session_id', $sessionId);
+    }
+
+    public function scopeByEventSession($query, $eventSessionId)
+    {
+        return $query->where('event_session_id', $eventSessionId);
     }
 }
