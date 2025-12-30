@@ -10,12 +10,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Modern Blue Color System */
-            --primary: #2563EB;
-            --primary-dark: #1D4ED8;
-            --primary-light: #3B82F6;
-            --secondary: #0EA5E9;
-            --accent: #06B6D4;
+            /* Modern Color System */
+            --primary: #6366F1;
+            --primary-dark: #4F46E5;
+            --primary-light: #818CF8;
+            --secondary: #EC4899;
+            --accent: #14B8A6;
             --success: #10B981;
             
             /* Neutral Colors */
@@ -28,23 +28,23 @@
             --white: #FFFFFF;
             
             /* Gradients */
-            --gradient-primary: linear-gradient(135deg, #2563EB 0%, #3B82F6 50%, #0EA5E9 100%);
-            --gradient-secondary: linear-gradient(135deg, #06B6D4 0%, #0284C7 100%);
+            --gradient-primary: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+            --gradient-secondary: linear-gradient(135deg, #14B8A6 0%, #06B6D4 100%);
             
-            /* Spacing - Compact */
-            --space-xs: 0.375rem;
-            --space-sm: 0.75rem;
-            --space-md: 1rem;
-            --space-lg: 1.5rem;
-            --space-xl: 2rem;
-            --space-2xl: 3rem;
-            --space-3xl: 4rem;
+            /* Spacing */
+            --space-xs: 0.5rem;
+            --space-sm: 1rem;
+            --space-md: 1.5rem;
+            --space-lg: 2rem;
+            --space-xl: 3rem;
+            --space-2xl: 4rem;
+            --space-3xl: 6rem;
             
             /* Border Radius */
-            --radius-sm: 0.375rem;
-            --radius-md: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
+            --radius-sm: 0.5rem;
+            --radius-md: 0.75rem;
+            --radius-lg: 1rem;
+            --radius-xl: 1.5rem;
             --radius-full: 9999px;
             
             /* Shadows */
@@ -52,7 +52,7 @@
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            --shadow-glow: 0 0 30px rgba(37, 99, 235, 0.2);
+            --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.25);
         }
 
         * {
@@ -82,9 +82,9 @@
             position: fixed;
             top: 0;
             width: 100%;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.97) 0%, rgba(30, 41, 59, 0.97) 100%);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
             z-index: 1000;
             animation: slideDown 0.5s ease;
         }
@@ -97,7 +97,7 @@
         .nav-container {
             max-width: 1280px;
             margin: 0 auto;
-            padding: 0.875rem 2rem;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -106,79 +106,44 @@
         .logo {
             font-size: 1.5rem;
             font-weight: 800;
-            color: #FFFFFF;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
             gap: 0.75rem;
             cursor: pointer;
-            text-decoration: none;
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
-            border-radius: 10px;
+            width: 42px;
+            height: 42px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-lg);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            font-size: 1.1rem;
             color: white;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .logo-icon::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-            transform: rotate(45deg);
-            animation: shimmer 3s infinite;
-        }
-
-        @keyframes shimmer {
-            0% {
-                transform: translateX(-100%) translateY(-100%) rotate(45deg);
-            }
-            100% {
-                transform: translateX(100%) translateY(100%) rotate(45deg);
-            }
-        }
-
-        .logo-icon:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-        }
-
-        .logo-text {
-            background: linear-gradient(90deg, #FFFFFF 0%, #94A3B8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 1.25rem;
+            font-weight: 800;
+            box-shadow: var(--shadow-lg);
         }
 
         .nav-links {
             display: flex;
-            gap: 2rem;
+            gap: 2.5rem;
             list-style: none;
             align-items: center;
         }
 
         .nav-links a {
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--dark);
             text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-size: 0.95rem;
+            font-weight: 600;
             transition: all 0.3s ease;
             position: relative;
-            padding: 0.5rem 0.25rem;
+            padding: 0.5rem 0;
         }
 
         .nav-links a::before {
@@ -188,14 +153,13 @@
             left: 50%;
             width: 0;
             height: 2px;
-            background: linear-gradient(90deg, #3B82F6, #06B6D4);
+            background: var(--gradient-primary);
             transition: all 0.3s ease;
             transform: translateX(-50%);
-            border-radius: 2px;
         }
 
         .nav-links a:hover {
-            color: #FFFFFF;
+            color: var(--primary);
         }
 
         .nav-links a:hover::before {
@@ -203,41 +167,28 @@
         }
 
         .nav-cta {
-            background: linear-gradient(135deg, #3B82F6 0%, #06B6D4 100%);
-            color: #FFFFFF !important;
-            padding: 0.65rem 1.75rem;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.875rem;
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
             border: none;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-cta::after {
-            content: '→';
-            font-size: 1rem;
-            transition: transform 0.3s ease;
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
         }
 
         .nav-cta:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
-        }
-
-        .nav-cta:hover::after {
-            transform: translateX(4px);
+            box-shadow: 0 12px 24px -5px rgba(99, 102, 241, 0.4);
         }
 
         /* ========== HERO SECTION ========== */
         .hero {
-            margin-top: 70px;
-            padding: var(--space-2xl) var(--space-lg) var(--space-xl);
-            max-width: 1200px;
+            margin-top: 80px;
+            padding: var(--space-3xl) var(--space-lg) var(--space-2xl);
+            max-width: 1280px;
             margin-left: auto;
             margin-right: auto;
             position: relative;
@@ -248,9 +199,9 @@
             position: absolute;
             top: -200px;
             right: -100px;
-            width: 700px;
-            height: 700px;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
             border-radius: 50%;
             animation: float 20s ease-in-out infinite;
         }
@@ -263,7 +214,7 @@
         .hero-grid {
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
-            gap: 3rem;
+            gap: 4rem;
             align-items: center;
             position: relative;
             z-index: 1;
@@ -282,14 +233,14 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(37, 99, 235, 0.1);
+            background: rgba(99, 102, 241, 0.1);
             color: var(--primary);
             padding: 0.5rem 1.25rem;
             border-radius: var(--radius-full);
             font-size: 0.875rem;
             font-weight: 700;
-            margin-bottom: 1.25rem;
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(99, 102, 241, 0.2);
         }
 
         .hero-badge-dot {
@@ -301,19 +252,18 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
-            50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(37, 99, 235, 0); }
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
         }
 
         .hero h1 {
-            font-size: 3.5rem;
+            font-size: 4.5rem;
             font-weight: 800;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
             background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            line-height: 1.15;
-            letter-spacing: -0.02em;
+            line-height: 1.1;
         }
 
         .hero-highlight {
@@ -324,11 +274,11 @@
         }
 
         .hero-description {
-            font-size: 1.125rem;
-            line-height: 1.7;
+            font-size: 1.25rem;
+            line-height: 1.8;
             color: var(--gray);
-            margin-bottom: 2rem;
-            max-width: 560px;
+            margin-bottom: 2.5rem;
+            max-width: 580px;
         }
 
         .hero-actions {
@@ -340,9 +290,9 @@
         .btn-primary {
             background: var(--gradient-primary);
             color: white;
-            padding: 1rem 2.25rem;
+            padding: 1.125rem 2.5rem;
             border: none;
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -351,14 +301,14 @@
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.5);
         }
 
         .btn-secondary {
             color: var(--dark);
-            padding: 1rem 1.75rem;
-            font-size: 1rem;
+            padding: 1.125rem 2rem;
+            font-size: 1.05rem;
             font-weight: 700;
             text-decoration: none;
             display: inline-flex;
@@ -374,16 +324,9 @@
         }
 
         .hero-stats {
-            display: flex;
-            justify-content: center;
-            gap: 4rem;
-            text-align: center;
-            margin: 2.5rem auto 0;
-            width: 100%;
-        }
-
-        .hero-stat {
-            text-align: center;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
         }
 
         .hero-stat-number {
@@ -445,51 +388,49 @@
 
         /* ========== SECTIONS ========== */
         .section {
-            padding: var(--space-2xl) var(--space-lg);
-            max-width: 1200px;
+            padding: var(--space-3xl) var(--space-lg);
+            max-width: 1280px;
             margin: 0 auto;
         }
 
         .section-header {
             text-align: center;
-            margin-bottom: var(--space-xl);
+            margin-bottom: var(--space-2xl);
         }
 
         .section-badge {
             display: inline-block;
-            background: rgba(37, 99, 235, 0.1);
+            background: rgba(99, 102, 241, 0.1);
             color: var(--primary);
             padding: 0.5rem 1.25rem;
             border-radius: var(--radius-full);
             font-size: 0.875rem;
             font-weight: 700;
-            margin-bottom: 0.75rem;
+            margin-bottom: 1rem;
         }
 
         .section-title {
-            font-size: 2.75rem;
+            font-size: 3.5rem;
             font-weight: 800;
-            margin-bottom: 0.75rem;
+            margin-bottom: 1rem;
             background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -0.02em;
         }
 
         .section-description {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             color: var(--gray);
-            max-width: 680px;
+            max-width: 700px;
             margin: 0 auto;
-            line-height: 1.7;
         }
 
         /* Process Timeline */
         .process-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin-top: var(--space-xl);
+            gap: 2rem;
+            margin-top: var(--space-2xl);
         }
 
         .process-step {
@@ -497,15 +438,15 @@
         }
 
         .process-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 1.25rem;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1.5rem;
             background: var(--gradient-primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 2.5rem;
             box-shadow: var(--shadow-lg);
         }
 
@@ -526,198 +467,119 @@
         }
 
         .process-title {
-            font-size: 1.125rem;
-            margin-bottom: 0.625rem;
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
             color: var(--dark);
-            font-weight: 700;
         }
 
         .process-description {
             color: var(--gray);
             line-height: 1.6;
-            font-size: 0.9375rem;
         }
 
         /* Features Grid */
         .features-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            margin-top: var(--space-xl);
+            gap: 2rem;
+            margin-top: var(--space-2xl);
         }
 
         .feature-card {
             background: white;
             border: 1px solid var(--gray-lighter);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-xl);
-            border-color: var(--primary-light);
-        }
-
-        .feature-icon {
-            font-size: 2rem;
-            margin-bottom: 1.125rem;
-        }
-
-        .feature-title {
-            font-size: 1.25rem;
-            margin-bottom: 0.75rem;
-            color: var(--dark);
-            font-weight: 700;
-        }
-
-        .feature-description {
-            color: var(--gray);
-            line-height: 1.65;
-            font-size: 0.9375rem;
-        }
-
-        /* Why TestPilot Comparison */
-        .comparison-section {
-            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-            padding: var(--space-3xl) var(--space-lg);
-        }
-
-        .comparison-grid {
-            display: grid;
-            grid-template-columns: 1fr 80px 1fr;
-            gap: 2rem;
-            max-width: 1100px;
-            margin: var(--space-xl) auto 0;
-            align-items: stretch;
-        }
-
-        .comparison-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: var(--radius-xl);
             padding: 2rem;
             transition: all 0.3s ease;
         }
 
-        .comparison-card.manual {
-            border-color: rgba(239, 68, 68, 0.3);
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary-light);
         }
 
-        .comparison-card.testpilot {
-            border-color: rgba(34, 197, 94, 0.3);
-            background: rgba(34, 197, 94, 0.05);
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
         }
 
-        .comparison-card:hover {
+        .feature-title {
+            font-size: 1.35rem;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .feature-description {
+            color: var(--gray);
+            line-height: 1.7;
+        }
+
+        /* Tech Stack */
+        .tech-stack {
+            background: var(--dark);
+            padding: var(--space-3xl) var(--space-lg);
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 2rem;
+            max-width: 1280px;
+            margin: var(--space-2xl) auto 0;
+        }
+
+        .tech-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: 2rem 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .tech-card:hover {
+            background: rgba(255, 255, 255, 0.1);
             transform: translateY(-5px);
         }
 
-        .comparison-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .comparison-icon {
-            font-size: 1.5rem;
-        }
-
-        .comparison-title {
-            color: white;
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-
-        .comparison-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .comparison-list li {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.95rem;
+        .tech-icon {
+            font-size: 2.5rem;
             margin-bottom: 1rem;
-            line-height: 1.5;
         }
 
-        .comparison-list li:last-child {
-            margin-bottom: 0;
-        }
-
-        .comparison-list .icon-bad {
-            color: #EF4444;
-            font-size: 1.1rem;
-            flex-shrink: 0;
-        }
-
-        .comparison-list .icon-good {
-            color: #22C55E;
-            font-size: 1.1rem;
-            flex-shrink: 0;
-        }
-
-        .comparison-vs {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .vs-badge {
-            background: linear-gradient(135deg, #3B82F6, #06B6D4);
+        .tech-name {
             color: white;
-            font-weight: 800;
-            font-size: 1.25rem;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
 
-        @media (max-width: 768px) {
-            .comparison-grid {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            .comparison-vs {
-                order: -1;
-            }
+        .tech-description {
+            color: var(--gray-light);
+            font-size: 0.875rem;
         }
 
         /* CTA Section */
         .cta-section {
             background: var(--gradient-primary);
-            padding: var(--space-2xl) var(--space-lg);
+            padding: var(--space-3xl) var(--space-lg);
             text-align: center;
         }
 
         .cta-title {
-            font-size: 2.75rem;
+            font-size: 3.5rem;
             font-weight: 800;
             color: white;
-            margin-bottom: 1.25rem;
-            letter-spacing: -0.02em;
+            margin-bottom: 1.5rem;
         }
 
         .cta-description {
-            font-size: 1.125rem;
-            color: rgba(255, 255, 255, 0.95);
-            margin-bottom: 2rem;
-            max-width: 680px;
+            font-size: 1.25rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2.5rem;
+            max-width: 700px;
             margin-left: auto;
             margin-right: auto;
-            line-height: 1.7;
         }
 
         .cta-button {
@@ -826,13 +688,13 @@
         <div class="nav-container">
             <div class="logo">
                 <div class="logo-icon">TP</div>
-                <span class="logo-text">TestPilot</span>
+                TestPilot
             </div>
             <ul class="nav-links">
                 <li><a href="#features">Features</a></li>
                 <li><a href="#how-it-works">How It Works</a></li>
-                <li><a href="#tech">Why TestPilot</a></li>
-                <li><a href="{{ route('login') }}" class="nav-cta" style="text-decoration: none;">Get Started</a></li>
+                <li><a href="#tech">Technology</a></li>
+                <li><button class="nav-cta">Get Started</button></li>
             </ul>
         </div>
     </nav>
@@ -854,8 +716,22 @@
                     Launch browsers automatically, record every interaction, and generate production-ready Cypress & Playwright test code instantly. Zero manual coding required.
                 </p>
                 <div class="hero-actions">
-                    <a href="{{ route('register') }}" class="btn-primary" style="text-decoration: none; display: inline-block;">Start Recording Now</a>
+                    <button class="btn-primary">Start Recording Now</button>
                     <a href="#how-it-works" class="btn-secondary">See How It Works →</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">80%+</div>
+                        <div class="hero-stat-label">Time Saved</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">2</div>
+                        <div class="hero-stat-label">Test Formats</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">100%</div>
+                        <div class="hero-stat-label">Auto-Generated</div>
+                    </div>
                 </div>
             </div>
             <div class="hero-visual">
@@ -874,20 +750,6 @@
                         <div class="code-line">});</div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="hero-stats">
-            <div class="hero-stat">
-                <div class="hero-stat-number">85%+</div>
-                <div class="hero-stat-label">Time Saved</div>
-            </div>
-            <div class="hero-stat">
-                <div class="hero-stat-number">10x</div>
-                <div class="hero-stat-label">Faster Testing</div>
-            </div>
-            <div class="hero-stat">
-                <div class="hero-stat-number">100%</div>
-                <div class="hero-stat-label">Auto-Generated</div>
             </div>
         </div>
     </section>
@@ -957,7 +819,7 @@
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🎬</div>
-                <h3 class="feature-title">Browser Automation</h3>
+                <h3 class="feature-title">Browser Automation (Codegen)</h3>
                 <p class="feature-description">
                     Playwright-style auto-launch browser with real-time event capture powered by Puppeteer service.
                 </p>
@@ -970,10 +832,10 @@
                 </p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3 class="feature-title">Real-Time Test Preview</h3>
+                <div class="feature-icon">🔄</div>
+                <h3 class="feature-title">Multi-Format Code Generation</h3>
                 <p class="feature-description">
-                    Watch your test code generate live as you interact with your application. Instant visual feedback.
+                    Generate Cypress OR Playwright tests from the same recording. Switch formats anytime.
                 </p>
             </div>
             <div class="feature-card">
@@ -984,10 +846,10 @@
                 </p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">�</div>
-                <h3 class="feature-title">One-Click Export</h3>
+                <div class="feature-icon">🔐</div>
+                <h3 class="feature-title">Granular Sharing System</h3>
                 <p class="feature-description">
-                    Export your generated tests instantly. Copy to clipboard or download ready-to-run test files.
+                    Share projects, modules, or test cases with role-based access control (viewer, editor, admin).
                 </p>
             </div>
             <div class="feature-card">
@@ -1012,55 +874,54 @@
                 </p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">�</div>
-                <h3 class="feature-title">Assertion Builder</h3>
+                <div class="feature-icon">📦</div>
+                <h3 class="feature-title">Export Test Suites</h3>
                 <p class="feature-description">
-                    Easily add assertions to your tests with point-and-click. Verify text, visibility, and element states.
+                    Export entire modules with all test cases as complete Cypress test suite instantly.
                 </p>
             </div>
         </div>
     </section>
 
-    <!-- Why TestPilot -->
-    <section class="comparison-section" id="tech">
+    <!-- Technology Stack -->
+    <section class="tech-stack" id="tech">
         <div style="max-width: 1280px; margin: 0 auto; text-align: center;">
-            <div class="section-badge" style="background: rgba(96, 165, 250, 0.2); color: #93C5FD;">Why TestPilot?</div>
-            <h2 style="font-size: 2.75rem; font-weight: 800; margin-bottom: 0.75rem; color: #FFFFFF; letter-spacing: -0.02em;">Stop Writing Tests Manually</h2>
+            <div class="section-badge">Powered By</div>
+            <h2 class="section-title" style="color: white;">Built on Modern Technology</h2>
             <p class="section-description" style="color: rgba(255, 255, 255, 0.8);">
-                See how TestPilot transforms your testing workflow and saves hours of development time
+                Leveraging cutting-edge tools and frameworks for reliable test automation
             </p>
         </div>
-        <div class="comparison-grid">
-            <div class="comparison-card manual">
-                <div class="comparison-header">
-                    <span class="comparison-icon">📝</span>
-                    <span class="comparison-title">Manual Test Writing</span>
-                </div>
-                <ul class="comparison-list">
-                    <li><span class="icon-bad">✗</span> Hours spent writing test code from scratch</li>
-                    <li><span class="icon-bad">✗</span> Manually finding and typing element selectors</li>
-                    <li><span class="icon-bad">✗</span> Constant debugging of flaky selectors</li>
-                    <li><span class="icon-bad">✗</span> Context switching between app and code</li>
-                    <li><span class="icon-bad">✗</span> Repetitive boilerplate for each test</li>
-                    <li><span class="icon-bad">✗</span> Easy to miss edge cases and interactions</li>
-                </ul>
+        <div class="tech-grid">
+            <div class="tech-card">
+                <div class="tech-icon">🌲</div>
+                <div class="tech-name">Cypress</div>
+                <div class="tech-description">E2E Testing</div>
             </div>
-            <div class="comparison-vs">
-                <div class="vs-badge">VS</div>
+            <div class="tech-card">
+                <div class="tech-icon">🎭</div>
+                <div class="tech-name">Playwright</div>
+                <div class="tech-description">Multi-Browser</div>
             </div>
-            <div class="comparison-card testpilot">
-                <div class="comparison-header">
-                    <span class="comparison-icon">🚀</span>
-                    <span class="comparison-title">With TestPilot</span>
-                </div>
-                <ul class="comparison-list">
-                    <li><span class="icon-good">✓</span> Generate complete tests in minutes</li>
-                    <li><span class="icon-good">✓</span> Auto-capture optimal selectors as you click</li>
-                    <li><span class="icon-good">✓</span> Smart selector priority for stable tests</li>
-                    <li><span class="icon-good">✓</span> Record directly in your application</li>
-                    <li><span class="icon-good">✓</span> Production-ready code instantly</li>
-                    <li><span class="icon-good">✓</span> Capture every interaction automatically</li>
-                </ul>
+            <div class="tech-card">
+                <div class="tech-icon">🔧</div>
+                <div class="tech-name">Puppeteer</div>
+                <div class="tech-description">Automation</div>
+            </div>
+            <div class="tech-card">
+                <div class="tech-icon">⚡</div>
+                <div class="tech-name">WebSocket</div>
+                <div class="tech-description">Real-Time</div>
+            </div>
+            <div class="tech-card">
+                <div class="tech-icon">🐘</div>
+                <div class="tech-name">Laravel</div>
+                <div class="tech-description">Backend</div>
+            </div>
+            <div class="tech-card">
+                <div class="tech-icon">🟢</div>
+                <div class="tech-name">Node.js</div>
+                <div class="tech-description">Service Layer</div>
             </div>
         </div>
     </section>
@@ -1071,7 +932,7 @@
         <p class="cta-description">
             Join development teams worldwide who have eliminated manual test writing with TestPilot's intelligent browser automation and code generation.
         </p>
-        <a href="{{ route('register') }}" class="cta-button" style="text-decoration: none;">Start Recording Free</a>
+        <button class="cta-button">Start Recording Free</button>
     </section>
 
     <!-- Footer -->
@@ -1088,32 +949,32 @@
                 <ul class="footer-links">
                     <li><a href="#features">Features</a></li>
                     <li><a href="#how-it-works">How It Works</a></li>
-                    <li><a href="{{ route('landing.documentation') }}">Documentation</a></li>
-                    <li><a href="{{ route('landing.api-reference') }}">API Reference</a></li>
+                    <li><a href="#">Documentation</a></li>
+                    <li><a href="#">API Reference</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h4>Company</h4>
                 <ul class="footer-links">
-                    <li><a href="{{ route('landing.about') }}">About webcrafter</a></li>
-                    <li><a href="{{ route('landing.contact') }}">Contact</a></li>
-                    <li><a href="{{ route('landing.blog') }}">Blog</a></li>
-                    <li><a href="{{ route('landing.careers') }}">Careers</a></li>
+                    <li><a href="#">About webcrafter</a></li>
+                    <li><a href="#">Contact</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Careers</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h4>Resources</h4>
                 <ul class="footer-links">
-                    <li><a href="{{ route('landing.quick-start') }}">Quick Start</a></li>
-                    <li><a href="{{ route('landing.support') }}">Support</a></li>
-                    <li><a href="{{ route('landing.community') }}">Community</a></li>
-                    <li><a href="https://github.com" target="_blank">GitHub</a></li>
+                    <li><a href="#">Quick Start</a></li>
+                    <li><a href="#">Support</a></li>
+                    <li><a href="#">Community</a></li>
+                    <li><a href="#">GitHub</a></li>
                 </ul>
             </div>
         </div>
         <div class="footer-bottom">
-            <div>© 2025 TestPilot by webcrafter. All rights reserved.</div>
-            <div>Developed by Khaled Saifullah Sadi & Arpa Nihan</div>
+            <div>© 2024 TestPilot by webcrafter. All rights reserved.</div>
+            <div>Created by Khaled Saifullah Sadi & Arpa Nihan</div>
         </div>
     </footer>
 </body>

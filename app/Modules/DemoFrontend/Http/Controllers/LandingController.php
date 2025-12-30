@@ -161,4 +161,76 @@ class LandingController
 
         return view('DemoFrontend::docs', compact('sections'));
     }
+
+    /**
+     * Display documentation page
+     */
+    public function documentation()
+    {
+        return view('DemoFrontend::pages.documentation');
+    }
+
+    /**
+     * Display API reference page
+     */
+    public function apiReference()
+    {
+        return view('DemoFrontend::pages.api-reference');
+    }
+
+    /**
+     * Display about page
+     */
+    public function about()
+    {
+        return view('DemoFrontend::pages.about');
+    }
+
+    /**
+     * Display contact page
+     */
+    public function contact()
+    {
+        return view('DemoFrontend::pages.contact');
+    }
+
+    /**
+     * Display blog page
+     */
+    public function blog()
+    {
+        return view('DemoFrontend::pages.blog');
+    }
+
+    /**
+     * Display careers page
+     */
+    public function careers()
+    {
+        return view('DemoFrontend::pages.careers');
+    }
+
+    /**
+     * Display quick start guide
+     */
+    public function quickStart()
+    {
+        return view('DemoFrontend::pages.quick-start');
+    }
+
+    /**
+     * Display support page
+     */
+    public function support()
+    {
+        return view('DemoFrontend::pages.support');
+    }
+
+    /**
+     * Display community page
+     */
+    public function community()
+    {
+        return view('DemoFrontend::pages.community');
+    }
 }
