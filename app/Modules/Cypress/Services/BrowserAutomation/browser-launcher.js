@@ -52,15 +52,30 @@ app.post('/start', async (req, res) => {
         console.log(`Starting recording session: ${sessionId} for ${url}`);
 
         // Launch browser
+        // const browser = await puppeteer.launch({
+        //     headless: false,
+        //     defaultViewport: null,
+        //     args: [
+        //         '--start-maximized',
+        //         '--disable-blink-features=AutomationControlled',
+        //         '--disable-features=IsolateOrigins,site-per-process'
+        //     ]
+        // });
+
         const browser = await puppeteer.launch({
-            headless: false,
-            defaultViewport: null,
-            args: [
-                '--start-maximized',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-features=IsolateOrigins,site-per-process'
-            ]
-        });
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
+    headless: 'new', // REQUIRED on VPS
+    defaultViewport: null,
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process'
+        ]
+    });
+
 
         const page = await browser.newPage();
 
