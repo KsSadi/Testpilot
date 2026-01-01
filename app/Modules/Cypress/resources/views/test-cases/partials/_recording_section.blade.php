@@ -361,6 +361,8 @@ function startEventPolling() {
     
     const [, projectId, moduleId, testCaseId] = urlMatch;
     
+    console.log('[Event Polling] Starting polling for session:', recordingSessionId);
+    
     const pollInterval = setInterval(async () => {
         if (!recordingSessionId) {
             clearInterval(pollInterval);
@@ -368,18 +370,24 @@ function startEventPolling() {
         }
         
         try {
-            const response = await fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/events/${recordingSessionId}`);
+            const pollUrl = `/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/events/${recordingSessionId}`;
+            console.log('[Event Polling] Fetching:', pollUrl);
+            
+            const response = await fetch(pollUrl);
             const data = await response.json();
+            
+            console.log('[Event Polling] Response:', data);
             
             if (data.success && data.events) {
                 capturedEvents = data.events;
                 document.getElementById('events-count').textContent = data.eventsCount;
+                console.log('[Event Polling] Events count:', data.eventsCount);
                 
                 // Update event feed
                 updateEventFeed(data.events);
             }
         } catch (error) {
-            console.error('Event polling error:', error);
+            console.error('[Event Polling] Error:', error);
         }
     }, 2000);
 }
