@@ -4,7 +4,9 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "recorder": "node app/Modules/Cypress/Services/BrowserAutomation/browser-launcher.js"
+        "recorder": "node app/Modules/Cypress/Services/BrowserAutomation/browser-launcher.js",
+        "recorder:vps": "VPS_MODE=true USE_VNC=true node app/Modules/Cypress/Services/BrowserAutomation/browser-launcher.js",
+        "recorder:headless": "VPS_MODE=true HEADLESS=true USE_VNC=false node app/Modules/Cypress/Services/BrowserAutomation/browser-launcher.js"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

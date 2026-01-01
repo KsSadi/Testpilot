@@ -3,6 +3,7 @@
 /**
  * Browser Automation Service
  * Similar to Playwright Codegen - Launches browser and captures user interactions
+ * Supports VPS deployment with noVNC for remote browser access
  */
 
 import puppeteer from 'puppeteer';
@@ -11,6 +12,7 @@ import { WebSocketServer } from 'ws';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { vncManager } from './vnc-session-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,7 +20,26 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(express.json());
 
-const PORT = 3031;
+// Enable CORS for frontend access
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
+const PORT = process.env.RECORDER_PORT || 3031;
+
+// Environment detection for VPS/Server deployment
+const IS_VPS = process.env.VPS_MODE === 'true' || process.env.DISPLAY === undefined || process.env.DISPLAY === '';
+const USE_VNC = process.env.USE_VNC === 'true' || IS_VPS;  // Enable VNC on VPS for remote viewing
+const USE_HEADLESS = process.env.HEADLESS === 'true' && !USE_VNC;  // Headless only if VNC is disabled
+const SERVER_HOST = process.env.SERVER_HOST || 'localhost';  // Your VPS IP or domain
+
+console.log(`[CONFIG] VPS Mode: ${IS_VPS}, Use VNC: ${USE_VNC}, Headless: ${USE_HEADLESS}, Server Host: ${SERVER_HOST}`);
 const sessions = new Map();
 
 // WebSocket server for real-time event streaming
@@ -51,35 +72,59 @@ app.post('/start', async (req, res) => {
     try {
         console.log(`Starting recording session: ${sessionId} for ${url}`);
 
+        let vncSession = null;
+        let displayEnv = process.env.DISPLAY;
+
+        // Start VNC session for remote viewing on VPS
+        if (USE_VNC) {
+            console.log(`[VNC] Starting VNC session for remote browser access...`);
+            try {
+                vncSession = await vncManager.startSession(sessionId);
+                displayEnv = vncSession.displayEnv;
+                console.log(`[VNC] Session ready - Display: ${displayEnv}, noVNC Port: ${vncSession.noVncPort}`);
+            } catch (vncError) {
+                console.error(`[VNC] Failed to start VNC session:`, vncError.message);
+                return res.status(500).json({
+                    error: 'Failed to start VNC session',
+                    message: vncError.message,
+                    hint: 'Make sure Xvfb, x11vnc, and websockify are installed'
+                });
+            }
+        }
+
+        // Browser launch options based on environment
+        const browserOptions = {
+            headless: USE_HEADLESS ? 'new' : false,
+            defaultViewport: USE_VNC ? { width: 1920, height: 1080 } : null,
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+            args: [
+                '--start-maximized',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-features=IsolateOrigins,site-per-process',
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                // Window size for VNC
+                ...(USE_VNC ? ['--window-size=1920,1080'] : [])
+            ],
+            // Set DISPLAY environment for VNC
+            env: USE_VNC ? { ...process.env, DISPLAY: displayEnv } : process.env
+        };
+
+        console.log(`[CONFIG] Launching browser with options:`, {
+            headless: browserOptions.headless,
+            display: displayEnv,
+            executablePath: browserOptions.executablePath || 'default',
+            argsCount: browserOptions.args.length
+        });
+
         // Launch browser
-        // const browser = await puppeteer.launch({
-        //     headless: false,
-        //     defaultViewport: null,
-        //     args: [
-        //         '--start-maximized',
-        //         '--disable-blink-features=AutomationControlled',
-        //         '--disable-features=IsolateOrigins,site-per-process'
-        //     ]
-        // });
-
-        const browser = await puppeteer.launch({
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome',
-    headless: 'new', // REQUIRED on VPS
-    defaultViewport: null,
-    args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-features=IsolateOrigins,site-per-process'
-        ]
-    });
-
+        const browser = await puppeteer.launch(browserOptions);
 
         const page = await browser.newPage();
 
-        // Store session
+        // Store session with VNC info
         const session = {
             sessionId,
             testCaseId,
@@ -88,7 +133,14 @@ app.post('/start', async (req, res) => {
             page,
             events: [],
             startTime: Date.now(),
-            ws: null
+            ws: null,
+            // VNC session info
+            vncSession: vncSession ? {
+                display: vncSession.display,
+                vncPort: vncSession.vncPort,
+                noVncPort: vncSession.noVncPort,
+                viewerUrl: `http://${SERVER_HOST}:${vncSession.noVncPort}/vnc.html?autoconnect=true`
+            } : null
         };
         sessions.set(sessionId, session);
 
@@ -181,11 +233,16 @@ app.post('/start', async (req, res) => {
         });
 
         // Handle browser close (when user manually closes the browser)
-        browser.on('disconnected', () => {
+        browser.on('disconnected', async () => {
             console.log(`Browser closed manually for session: ${sessionId}`);
             session.browserClosed = true;
             session.stopped = true;
             session.stoppedAt = Date.now();
+            
+            // Stop VNC session if active
+            if (USE_VNC && session.vncSession) {
+                await vncManager.stopSession(sessionId);
+            }
             
             // Notify via WebSocket if connected
             if (session.ws && session.ws.readyState === 1) {
@@ -206,12 +263,25 @@ app.post('/start', async (req, res) => {
         // Navigate to URL
         await page.goto(url, { waitUntil: 'domcontentloaded' });
 
-        res.json({
+        // Build response with VNC viewer URL if applicable
+        const response = {
             success: true,
             sessionId,
-            message: 'Browser launched successfully',
-            wsUrl: `ws://localhost:${PORT}/ws/${sessionId}`
-        });
+            message: USE_VNC 
+                ? 'Browser launched! Open the viewer URL to see and interact with the browser.'
+                : 'Browser launched successfully',
+            wsUrl: `ws://${SERVER_HOST}:${PORT}/ws/${sessionId}`,
+            browserLaunched: true
+        };
+
+        // Add VNC viewer info for remote access
+        if (session.vncSession) {
+            response.vncEnabled = true;
+            response.viewerUrl = session.vncSession.viewerUrl;
+            response.message = `Browser launched! View and interact at: ${session.vncSession.viewerUrl}`;
+        }
+
+        res.json(response);
 
     } catch (error) {
         console.error('Error starting session:', error);
@@ -252,6 +322,11 @@ app.post('/stop', async (req, res) => {
             if (session.ws) {
                 session.ws.close();
                 session.ws = null;
+            }
+            // Stop VNC session if active
+            if (USE_VNC && session.vncSession) {
+                await vncManager.stopSession(sessionId);
+                session.vncSession = null;
             }
         } catch (e) {
             console.error('Error closing browser:', e);
@@ -325,7 +400,32 @@ app.get('/sessions', (req, res) => {
  * GET /health
  */
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', service: 'browser-automation' });
+    res.json({ 
+        status: 'ok', 
+        service: 'browser-automation',
+        vncEnabled: USE_VNC,
+        isVPS: IS_VPS,
+        activeSessions: sessions.size
+    });
+});
+
+/**
+ * Get VNC sessions info
+ * GET /vnc/sessions
+ */
+app.get('/vnc/sessions', (req, res) => {
+    if (!USE_VNC) {
+        return res.json({
+            enabled: false,
+            message: 'VNC is not enabled on this server'
+        });
+    }
+
+    const vncSessions = vncManager.getAllSessions();
+    res.json({
+        enabled: true,
+        sessions: vncSessions
+    });
 });
 
 /**
@@ -342,6 +442,10 @@ async function stopSession(sessionId) {
         if (session.ws) {
             session.ws.close();
         }
+        // Stop VNC session
+        if (USE_VNC) {
+            await vncManager.stopSession(sessionId);
+        }
     } catch (e) {
         console.error('Error closing browser:', e);
     }
@@ -351,12 +455,16 @@ async function stopSession(sessionId) {
 }
 
 // Cleanup old stopped sessions every minute
-setInterval(() => {
+setInterval(async () => {
     const now = Date.now();
     const FIVE_MINUTES = 5 * 60 * 1000;
     
     for (const [sessionId, session] of sessions.entries()) {
         if (session.stopped && (now - session.stoppedAt) > FIVE_MINUTES) {
+            // Also cleanup VNC session
+            if (USE_VNC) {
+                await vncManager.stopSession(sessionId);
+            }
             sessions.delete(sessionId);
             console.log(`Cleaned up old session: ${sessionId}`);
         }
@@ -366,20 +474,25 @@ setInterval(() => {
 // Handle WebSocket upgrade
 const server = app.listen(PORT, () => {
     console.log(`
-╔═══════════════════════════════════════════════════════╗
-║   Browser Automation Service (Codegen Mode)           ║
-║   Similar to Playwright Codegen                       ║
-╠═══════════════════════════════════════════════════════╣
-║   HTTP API: http://localhost:${PORT}                    ║
-║   WebSocket: ws://localhost:${PORT}/ws/{sessionId}      ║
-╠═══════════════════════════════════════════════════════╣
-║   Endpoints:                                          ║
-║   POST /start   - Start recording                     ║
-║   POST /stop    - Stop recording                      ║
-║   GET  /events/:sessionId - Get captured events       ║
-║   GET  /sessions - List active sessions               ║
-║   GET  /health  - Health check                        ║
-╚═══════════════════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════════════╗
+║   Browser Automation Service (Codegen Mode)                    ║
+║   Similar to Playwright Codegen                                ║
+╠════════════════════════════════════════════════════════════════╣
+║   Environment: ${IS_VPS ? 'VPS/Server' : 'Local/Desktop'}                                       ║
+║   VNC Remote Access: ${USE_VNC ? 'ENABLED ✓' : 'DISABLED'}                              ║
+║   Server Host: ${SERVER_HOST.padEnd(42)}║
+╠════════════════════════════════════════════════════════════════╣
+║   HTTP API: http://${SERVER_HOST}:${PORT}                               ║
+║   WebSocket: ws://${SERVER_HOST}:${PORT}/ws/{sessionId}                 ║
+╠════════════════════════════════════════════════════════════════╣
+║   Endpoints:                                                   ║
+║   POST /start   - Start recording (returns VNC viewer URL)     ║
+║   POST /stop    - Stop recording                               ║
+║   GET  /events/:sessionId - Get captured events                ║
+║   GET  /sessions - List active sessions                        ║
+║   GET  /vnc/sessions - List VNC sessions                       ║
+║   GET  /health  - Health check                                 ║
+╚════════════════════════════════════════════════════════════════╝
     `);
 });
 
@@ -395,6 +508,12 @@ server.on('upgrade', (request, socket, head) => {
 process.on('SIGINT', async () => {
     console.log('\nShutting down gracefully...');
     
+    // Stop all VNC sessions first
+    if (USE_VNC) {
+        console.log('Stopping all VNC sessions...');
+        await vncManager.stopAllSessions();
+    }
+    
     for (const [sessionId, session] of sessions.entries()) {
         await stopSession(sessionId);
     }
@@ -403,4 +522,17 @@ process.on('SIGINT', async () => {
         console.log('Server closed');
         process.exit(0);
     });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', async (err) => {
+    console.error('Uncaught Exception:', err);
+    if (USE_VNC) {
+        await vncManager.stopAllSessions();
+    }
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });

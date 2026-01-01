@@ -68,13 +68,24 @@ class RecordingController extends Controller
             }
 
             Log::info('Recording started successfully', ['sessionId' => $sessionId]);
-            return response()->json([
+            
+            // Build response with VNC info if available
+            $jsonResponse = [
                 'success' => true,
-                'message' => 'Browser launched! Start interacting with the website.',
+                'message' => $response['message'] ?? 'Browser launched! Start interacting with the website.',
                 'sessionId' => $sessionId,
-                'wsUrl' => $response['wsUrl'],
+                'wsUrl' => $response['wsUrl'] ?? null,
                 'browserLaunched' => true
-            ]);
+            ];
+            
+            // Include VNC viewer URL if VNC is enabled (for VPS)
+            if (isset($response['vncEnabled']) && $response['vncEnabled']) {
+                $jsonResponse['vncEnabled'] = true;
+                $jsonResponse['viewerUrl'] = $response['viewerUrl'];
+                $jsonResponse['message'] = 'Browser launched! Click the link below to view and interact with the browser.';
+            }
+            
+            return response()->json($jsonResponse);
 
         } catch (\Exception $e) {
             Log::error('Recording start failed: ' . $e->getMessage());
