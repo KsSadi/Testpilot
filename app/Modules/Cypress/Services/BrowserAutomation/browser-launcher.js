@@ -33,13 +33,18 @@ app.use((req, res, next) => {
 
 const PORT = process.env.RECORDER_PORT || 3031;
 
+// Platform detection - Windows doesn't have DISPLAY variable, so we need explicit check
+const IS_WINDOWS = process.platform === 'win32';
+
 // Environment detection for VPS/Server deployment
-const IS_VPS = process.env.VPS_MODE === 'true' || process.env.DISPLAY === undefined || process.env.DISPLAY === '';
-const USE_VNC = process.env.USE_VNC === 'true' || IS_VPS;  // Enable VNC on VPS for remote viewing
+// On Windows: Never use VPS mode or VNC unless explicitly set
+// On Linux: Check DISPLAY variable for VPS detection
+const IS_VPS = process.env.VPS_MODE === 'true' || (!IS_WINDOWS && (process.env.DISPLAY === undefined || process.env.DISPLAY === ''));
+const USE_VNC = process.env.USE_VNC === 'true' && !IS_WINDOWS;  // VNC only works on Linux
 const USE_HEADLESS = process.env.HEADLESS === 'true' && !USE_VNC;  // Headless only if VNC is disabled
 const SERVER_HOST = process.env.SERVER_HOST || 'localhost';  // Your VPS IP or domain
 
-console.log(`[CONFIG] VPS Mode: ${IS_VPS}, Use VNC: ${USE_VNC}, Headless: ${USE_HEADLESS}, Server Host: ${SERVER_HOST}`);
+console.log(`[CONFIG] Platform: ${IS_WINDOWS ? 'Windows' : 'Linux/Unix'}, VPS Mode: ${IS_VPS}, Use VNC: ${USE_VNC}, Headless: ${USE_HEADLESS}, Server Host: ${SERVER_HOST}`);
 const sessions = new Map();
 
 // WebSocket server for real-time event streaming

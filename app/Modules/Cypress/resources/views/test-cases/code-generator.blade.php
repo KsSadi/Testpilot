@@ -241,7 +241,7 @@ let selectedSessionId = '{{ $selectedSession?->hash_id ?? "" }}';
 
 // Select a different session
 function selectSession(sessionId) {
-    window.location.href = '{{ route("code-generator.index", [$project, $module, $testCase]) }}?session=' + sessionId;
+    window.location.href = '{{ route("code-generator.page", [$project, $module, $testCase]) }}?session=' + sessionId;
 }
 
 // Delete a session
@@ -284,7 +284,7 @@ async function generateCode() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     
     try {
-        const response = await fetch('{{ route("code-generator.generate", [$project, $module, $testCase]) }}', {
+        const response = await fetch('{{ route("code-generator.generate-basic", [$project, $module, $testCase]) }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -364,7 +364,7 @@ async function generateAICode() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     
     try {
-        const response = await fetch('{{ route("code-generator.generate-ai", [$project, $module, $testCase]) }}', {
+        const response = await fetch('{{ route("code-generator.generate-ai-pro", [$project, $module, $testCase]) }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -431,7 +431,7 @@ async function deleteCode(hashId) {
     const codeBlock = document.getElementById('code-block-' + hashId);
     
     try {
-        const response = await fetch('{{ route("code-generator.delete", [$project, $module, $testCase, "__HASH__"]) }}'.replace('__HASH__', hashId), {
+        const response = await fetch('{{ route("code-generator.delete-version", [$project, $module, $testCase, "__HASH__"]) }}'.replace('__HASH__', hashId), {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',

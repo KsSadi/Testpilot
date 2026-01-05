@@ -16,6 +16,110 @@ class CodeGeneratorService
     }
 
     /**
+     * Generate code for cross-origin block
+     */
+    protected function generateCrossOriginBlock(string $domain, array $events): string
+    {
+        $code = "    // Handle cross-origin authentication on {$domain}\n";
+        $code .= "    cy.origin('{$domain}', () => {\n";
+        
+        foreach ($events as $event) {
+            $eventType = $event['type'] ?? 'unknown';
+            $selector = $event['selector'] ?? '';
+            $value = $event['value'] ?? '';
+            
+            switch ($eventType) {
+                case 'pageload':
+                    // Skip pageload events
+                    break;
+                    
+                case 'click':
+                    if ($selector) {
+                        // Extract ID selector
+                        if (preg_match('/^#(.+)$/', $selector, $matches)) {
+                            $id = addslashes($matches[1]);
+                            $code .= "      cy.get('[id=\"{$id}\"]').click({ force: true });\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                        // TEXT selector
+                        elseif (preg_match('/^TEXT:([^:]+):(.+)$/', $selector, $matches)) {
+                            $tag = $matches[1];
+                            $text = addslashes($matches[2]);
+                            $code .= "      cy.contains('{$tag}', '{$text}').click({ force: true });\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                        // XPATH selector
+                        elseif (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
+                            $xpath = addslashes($matches[1]);
+                            $code .= "      cy.xpath('{$xpath}').first().click({ force: true });\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                        // Other selectors (name, aria-label, etc.)
+                        else {
+                            $escapedSelector = addslashes($selector);
+                            $code .= "      cy.get('{$escapedSelector}').click({ force: true });\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                    }
+                    break;
+                    
+                case 'input':
+                    if ($selector && $value !== '') {
+                        // Extract ID selector
+                        if (preg_match('/^#(.+)$/', $selector, $matches)) {
+                            $id = addslashes($matches[1]);
+                            $escapedValue = addslashes($value);
+                            $code .= "      cy.get('[id=\"{$id}\"]').type('{$escapedValue}');\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                        // name attribute
+                        elseif (preg_match('/^\[name="([^"]+)"\]$/', $selector, $matches)) {
+                            $name = addslashes($matches[1]);
+                            $escapedValue = addslashes($value);
+                            $code .= "      cy.get('[name=\"{$name}\"]').type('{$escapedValue}');\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                        // XPATH selector
+                        elseif (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
+                            $xpath = addslashes($matches[1]);
+                            $escapedValue = addslashes($value);
+                            $code .= "      cy.xpath('{$xpath}').first().type('{$escapedValue}');\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                        // Other selectors
+                        else {
+                            $escapedSelector = addslashes($selector);
+                            $escapedValue = addslashes($value);
+                            $code .= "      cy.get('{$escapedSelector}').type('{$escapedValue}');\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                    }
+                    break;
+                    
+                case 'select':
+                case 'change':
+                    if ($selector && $value !== '') {
+                        if (preg_match('/^#(.+)$/', $selector, $matches)) {
+                            $id = addslashes($matches[1]);
+                            $escapedValue = addslashes($value);
+                            $code .= "      cy.get('[id=\"{$id}\"]').select('{$escapedValue}');\n";
+                            $code .= "      cy.wait(2000);\n";
+                        } else {
+                            $escapedSelector = addslashes($selector);
+                            $escapedValue = addslashes($value);
+                            $code .= "      cy.get('{$escapedSelector}').select('{$escapedValue}');\n";
+                            $code .= "      cy.wait(2000);\n";
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        $code .= "    });\n\n";
+        return $code;
+    }
+
+    /**
      * Generate Cypress code from raw events array (from browser automation)
      * Used by the auto-recorder feature
      */
@@ -68,6 +172,25 @@ class CodeGeneratorService
                 break;
             }
         }
+        
+        // Clean the initial URL - remove callback paths and query parameters
+        if ($initialUrl) {
+            $parsedUrl = parse_url($initialUrl);
+            $path = $parsedUrl['path'] ?? '/';
+            
+            // Remove authentication callback paths
+            if (strpos($path, '/keycloak/callback') !== false ||
+                strpos($path, '/auth/callback') !== false ||
+                strpos($path, '/oauth/callback') !== false ||
+                strpos($path, '/saml/callback') !== false) {
+                $path = '/';
+            }
+            
+            // Rebuild clean URL (scheme + host + clean path, no query params)
+            $initialUrl = ($parsedUrl['scheme'] ?? 'https') . '://' . 
+                          ($parsedUrl['host'] ?? '') . 
+                          $path;
+        }
 
         $code = "describe('Recorded Test', () => {\n";
         $code .= "  it('should perform recorded actions', () => {\n";
@@ -77,7 +200,7 @@ class CodeGeneratorService
             $code .= "    cy.visit('{$initialUrl}');\n\n";
         }
         
-        // Add ONE modal check at the beginning if needed
+        // Add modal check at the beginning (handles modals that appear on page load)
         $code .= "    // Close any open modals at start\n";
         $code .= "    cy.get('body').then(\$body => {\n";
         $code .= "      const modal = \$body.find('.modal.fade.in, .modal.show, .modal[style*=\"display: block\"]');\n";
@@ -103,114 +226,144 @@ class CodeGeneratorService
 
         $lastUrl = $initialUrl;
         $visitedUrls = [$initialUrl];
-        $crossOriginAdded = false;
         
-        foreach ($events as $event) {
-            $eventType = $event['type'] ?? 'unknown';
-            $selector = $event['selector'] ?? '';
-            $value = $event['value'] ?? '';
-            $url = $event['url'] ?? '';
+        // Determine main domain (first domain)
+        $mainDomain = $domains[0] ?? null;
+        
+        // Group events by domain for cross-origin handling
+        if ($hasCrossOrigin && count($domains) > 1) {
+            // Process events in order, grouping consecutive same-domain events
+            $currentDomain = $mainDomain;
+            $eventGroups = [];
+            $currentGroup = [];
             
-            // Add cross-origin handler before navigation to auth domain (but after first click)
-            if ($hasCrossOrigin && !$crossOriginAdded && $url && $crossOriginDomain) {
-                $currentDomain = parse_url($url, PHP_URL_HOST);
-                if ($currentDomain === $crossOriginDomain) {
-                    $code .= "    // Cross-origin authentication handling\n";
-                    $code .= "    cy.origin('{$crossOriginDomain}', () => {\n";
-                    $code .= "      cy.on('uncaught:exception', (err) => {\n";
-                    $code .= "        if (err.message.includes('baseUrl') || err.message.includes('Identifier')) {\n";
-                    $code .= "          return false;\n";
-                    $code .= "        }\n";
-                    $code .= "        return true;\n";
-                    $code .= "      });\n";
-                    $code .= "    });\n\n";
-                    $crossOriginAdded = true;
+            foreach ($events as $event) {
+                $eventUrl = $event['url'] ?? '';
+                $eventDomain = $eventUrl ? parse_url($eventUrl, PHP_URL_HOST) : $currentDomain;
+                
+                // If domain changes, save current group and start new one
+                if ($eventDomain !== $currentDomain && !empty($currentGroup)) {
+                    $eventGroups[] = [
+                        'domain' => $currentDomain,
+                        'events' => $currentGroup
+                    ];
+                    $currentGroup = [];
+                    $currentDomain = $eventDomain;
+                }
+                
+                $currentGroup[] = $event;
+            }
+            
+            // Add last group
+            if (!empty($currentGroup)) {
+                $eventGroups[] = [
+                    'domain' => $currentDomain,
+                    'events' => $currentGroup
+                ];
+            }
+            
+            // Generate code for each group
+            foreach ($eventGroups as $group) {
+                $groupDomain = $group['domain'];
+                $groupEvents = $group['events'];
+                
+                if ($groupDomain === $mainDomain) {
+                    // Main domain - generate normal code
+                    foreach ($groupEvents as $event) {
+                        $code .= $this->generateEventCode($event);
+                    }
+                } else {
+                    // Cross-origin domain - wrap in cy.origin()
+                    $code .= $this->generateCrossOriginBlock($groupDomain, $groupEvents);
                 }
             }
-
-            switch ($eventType) {
-                case 'pageload':
-                    // Skip pageload events - already handled with initial visit
-                    break;
-
-                case 'click':
-                    if ($selector) {
-                        $code .= $this->generateClickCommand($selector, $event);
-                    }
-                    break;
-
-                case 'input':
-                    if ($selector && $value !== '') {
-                        // Check if it's a radio/checkbox based on event data
-                        $inputType = $event['inputType'] ?? '';
-                        $tagName = $event['tagName'] ?? '';
-                        if (in_array($inputType, ['radio', 'checkbox'])) {
-                            // Radio and checkbox should just be clicked, not typed into
-                            $code .= $this->generateClickCommand($selector, $event);
-                        } else {
-                            $code .= $this->generateInputCommand($selector, $value, $tagName, $inputType);
-                        }
-                    }
-                    break;
-
-                case 'change':
-                    // Handle change events for radio, checkbox, and select
-                    if ($selector && isset($event['inputType'])) {
-                        $inputType = $event['inputType'];
-                        if (in_array($inputType, ['radio', 'checkbox'])) {
-                            // Just click radio/checkbox
-                            $code .= $this->generateClickCommand($selector, $event);
-                        } elseif ($inputType === 'select-one' || strtolower($event['tagName'] ?? '') === 'select') {
-                            // Handle select dropdown
-                            $code .= $this->generateSelectCommand($selector, $value);
-                        }
-                    }
-                    break;
-
-                case 'keypress':
-                    // Handle Enter key press (often used for form submission)
-                    if (isset($event['key']) && $event['key'] === 'Enter' && $selector) {
-                        if (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
-                            $xpath = addslashes($matches[1]);
-                            $code .= "    cy.xpath('{$xpath}').type('{enter}');\n";
-                        } else {
-                            $escapedSelector = addslashes($selector);
-                            $code .= "    cy.get('{$escapedSelector}').type('{enter}');\n";
-                        }
-                        $code .= "    cy.wait(2000);\n";
-                    }
-                    break;
-                    
-                case 'submit':
-                    if ($selector) {
-                        // Handle XPATH: prefix for submit
-                        if (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
-                            $xpath = addslashes($matches[1]);
-                            $code .= "    cy.xpath('{$xpath}').submit();\n";
-                        } else {
-                            $escapedSelector = addslashes($selector);
-                            $code .= "    cy.get('{$escapedSelector}').submit();\n";
-                        }
-                        $code .= "    cy.wait(2000);\n";
-                    }
-                    break;
-
-                case 'navigation':
-                    // Add URL assertion when navigation occurs
-                    if ($url && $url !== 'about:blank' && $url !== $lastUrl && !in_array($url, $visitedUrls)) {
-                        $code .= "\n    // Navigated to: {$url}\n";
-                        $code .= "    cy.url().should('include', '" . parse_url($url, PHP_URL_PATH) . "');\n";
-                        $code .= "    cy.wait(1000);\n";
-                        $visitedUrls[] = $url;
-                        $lastUrl = $url;
-                    }
-                    break;
+        } else {
+            // No cross-origin, process all events normally
+            foreach ($events as $event) {
+                $code .= $this->generateEventCode($event);
             }
         }
 
         $code .= "  });\n";
         $code .= "});\n";
 
+        return $code;
+    }
+    
+    /**
+     * Generate code for a single event
+     */
+    protected function generateEventCode(array $event): string
+    {
+        $code = '';
+        $eventType = $event['type'] ?? 'unknown';
+        $selector = $event['selector'] ?? '';
+        $value = $event['value'] ?? '';
+        $url = $event['url'] ?? '';
+        
+        switch ($eventType) {
+            case 'pageload':
+                break;
+
+            case 'click':
+                if ($selector) {
+                    $code .= $this->generateClickCommand($selector, $event);
+                }
+                break;
+
+            case 'input':
+                if ($selector && $value !== '') {
+                    $inputType = $event['inputType'] ?? '';
+                    $tagName = $event['tagName'] ?? '';
+                    if (in_array($inputType, ['radio', 'checkbox'])) {
+                        $code .= $this->generateClickCommand($selector, $event);
+                    } else {
+                        $code .= $this->generateInputCommand($selector, $value, $tagName, $inputType);
+                    }
+                }
+                break;
+
+            case 'change':
+                if ($selector && isset($event['inputType'])) {
+                    $inputType = $event['inputType'];
+                    if (in_array($inputType, ['radio', 'checkbox'])) {
+                        $code .= $this->generateClickCommand($selector, $event);
+                    } elseif ($inputType === 'select-one' || strtolower($event['tagName'] ?? '') === 'select') {
+                        $code .= $this->generateSelectCommand($selector, $value);
+                    }
+                }
+                break;
+
+            case 'keypress':
+                if (isset($event['key']) && $event['key'] === 'Enter' && $selector) {
+                    if (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
+                        $xpath = addslashes($matches[1]);
+                        $code .= "    cy.xpath('{$xpath}').type('{enter}');\n";
+                    } else {
+                        $escapedSelector = addslashes($selector);
+                        $code .= "    cy.get('{$escapedSelector}').type('{enter}');\n";
+                    }
+                    $code .= "    cy.wait(2000);\n";
+                }
+                break;
+                
+            case 'submit':
+                if ($selector) {
+                    if (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
+                        $xpath = addslashes($matches[1]);
+                        $code .= "    cy.xpath('{$xpath}').submit();\n";
+                    } else {
+                        $escapedSelector = addslashes($selector);
+                        $code .= "    cy.get('{$escapedSelector}').submit();\n";
+                    }
+                    $code .= "    cy.wait(2000);\n";
+                }
+                break;
+
+            case 'navigation':
+                break;
+        }
+        
         return $code;
     }
     
@@ -264,10 +417,22 @@ class CodeGeneratorService
         }
         
         // Handle TEXT: prefix (text-based selector for buttons/links)
-        if (preg_match('/^TEXT:([^:]+):(.+)$/', $selector, $matches)) {
-            $tag = $matches[1];
-            $text = addslashes($matches[2]);
-            return "    cy.contains('{$tag}', '{$text}', { timeout: 15000 }).should('be.visible').click({ force: true });\n" .
+        if (preg_match('/^TEXT:([^:]+):(.+)$/s', $selector, $matches)) {
+            $tag = trim($matches[1]);
+            $text = trim($matches[2]);
+            // Extract just the first line or key text to avoid multi-line issues
+            $textLines = explode("\n", $text);
+            $cleanText = trim($textLines[0]);
+            
+            // If text is too long or empty, just use tag selector
+            if (strlen($cleanText) > 50 || empty($cleanText)) {
+                return "    cy.get('{$tag}').first().click({ force: true });\n" .
+                       "    cy.wait(2000);\n";
+            }
+            
+            $escapedText = addslashes($cleanText);
+            // Add { force: true } to handle display:none elements
+            return "    cy.contains('{$tag}', '{$escapedText}').click({ force: true });\n" .
                    "    cy.wait(2000);\n";
         }
         
@@ -275,12 +440,9 @@ class CodeGeneratorService
         if (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
             $xpath = $matches[1];
             $escapedXpath = addslashes($xpath);
-            return "    cy.xpath('{$escapedXpath}', { timeout: 15000 }).then(\$el => {\n" .
-                   "      if (\$el.length > 0 && \$el.is(':visible')) {\n" .
-                   "        cy.xpath('{$escapedXpath}').first().click({ force: true });\n" .
-                   "        cy.wait(2000);\n" .
-                   "      }\n" .
-                   "    });\n";
+            // Add .first() to handle multiple matches, { force: true } for hidden elements
+            return "    cy.xpath('{$escapedXpath}').first().click({ force: true });\n" .
+                   "    cy.wait(2000);\n";
         }
         
         // Handle ID selector (starts with #)
@@ -288,34 +450,50 @@ class CodeGeneratorService
             $id = $matches[1];
             $escapedId = addslashes($id);
             
-            if ($needsFallback) {
-                // Generate code with fallback button logic
+            // Check if this is a date picker cell (appears in calendar popup)
+            if (preg_match('/^cell\d+-.*_date$/i', $id)) {
+                // Date picker cells need conditional check (they're in popups)
                 return "    cy.get('body').then(\$body => {\n" .
-                       "      const \$el = \$body.find('[id=\"{$id}\"]');\n" .
-                       "      if (\$el.length > 0 && \$el.is(':visible')) {\n" .
-                       "        cy.get('[id=\"{$escapedId}\"]', { timeout: 15000 }).first().click({ force: true });\n" .
-                       "        cy.wait(2000);\n" .
-                       "      } else if (\$body.find('{$fallbackSelector}').is(':visible')) {\n" .
-                       "        cy.get('{$fallbackSelector}', { timeout: 15000 }).first().click({ force: true });\n" .
+                       "      if (\$body.find('[id=\"{$escapedId}\"]').length > 0) {\n" .
+                       "        cy.get('[id=\"{$escapedId}\"]', { timeout: 15000 }).click({ force: true });\n" .
                        "        cy.wait(2000);\n" .
                        "      }\n" .
                        "    });\n";
             }
             
-            return "    cy.get('body').then(\$body => {\n" .
-                   "      const \$el = \$body.find('[id=\"{$id}\"]');\n" .
-                   "      if (\$el.length > 0 && \$el.is(':visible')) {\n" .
-                   "        cy.get('[id=\"{$escapedId}\"]', { timeout: 15000 }).first().click({ force: true });\n" .
-                   "        cy.wait(2000);\n" .
-                   "      }\n" .
-                   "    });\n";
+            // Check if this is an optional element (modal, popup, notification, etc.)
+            // These elements might not always appear, so wrap in conditional
+            if (preg_match('/(modal|popup|dialog|alert|notification|toast|banner)/i', $id)) {
+                return "    cy.get('body').then(\$body => {\n" .
+                       "      if (\$body.find('[id=\"{$escapedId}\"]').length > 0) {\n" .
+                       "        cy.get('[id=\"{$escapedId}\"]', { timeout: 15000 }).click({ force: true });\n" .
+                       "        cy.wait(2000);\n" .
+                       "      }\n" .
+                       "    });\n";
+            }
+            
+            // Add { force: true } for elements that might be hidden
+            return "    cy.get('[id=\"{$escapedId}\"]').click({ force: true });\n" .
+                   "    cy.wait(2000);\n";
         }
         
-        // Fallback for any other selector format (shouldn't happen with new strategy)
+        // Fallback: Try to extract tag from TEXT selectors that didn't match regex
+        if (strpos($selector, 'TEXT:') === 0) {
+            $parts = explode(':', $selector, 3);
+            if (count($parts) >= 2) {
+                $tag = $parts[1] ?? 'a';
+                return "    cy.get('{$tag}').first().click({ force: true });\n" .
+                       "    cy.wait(2000);\n";
+            }
+        }
+        
+        // Fallback for class-based or other CSS selectors
         $escapedSelector = addslashes($selector);
+        // Remove any newlines that might break the code
+        $escapedSelector = preg_replace('/[\r\n]+/', ' ', $escapedSelector);
         return "    // WARNING: Unexpected selector format\n" .
                "    cy.get('body').then(\$body => {\n" .
-               "      if (\$body.find('" . str_replace("'", "\\'", $selector) . "').length > 0) {\n" .
+               "      if (\$body.find('" . str_replace("'", "\\'", preg_replace('/[\r\n]+/', ' ', $selector)) . "').length > 0) {\n" .
                "        cy.get('{$escapedSelector}', { timeout: 15000 }).first().click({ force: true });\n" .
                "        cy.wait(2000);\n" .
                "      }\n" .
@@ -343,45 +521,31 @@ class CodeGeneratorService
         if (preg_match('/^TEXT:([^:]+):(.+)$/', $selector, $matches)) {
             $tag = $matches[1];
             $text = addslashes($matches[2]);
-            return "    cy.contains('{$tag}', '{$text}', { timeout: 15000 }).should('be.visible').clear().type('{$escapedValue}');\n" .
+            return "    cy.contains('{$tag}', '{$text}').clear().type('{$escapedValue}');\n" .
                    "    cy.wait(2000);\n";
         }
         
         // Handle XPATH: prefix
         if (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
             $xpath = addslashes($matches[1]);
-            return "    cy.xpath('{$xpath}', { timeout: 15000 }).then(\$el => {\n" .
-                   "      if (\$el.length > 0 && \$el.is(':visible')) {\n" .
-                   "        cy.xpath('{$xpath}').first().clear().type('{$escapedValue}');\n" .
-                   "        cy.wait(2000);\n" .
-                   "      }\n" .
-                   "    });\n";
+            return "    cy.xpath('{$xpath}').first().clear().type('{$escapedValue}');\n" .
+                   "    cy.wait(2000);\n";
         }
         
-        // Handle ID selector (starts with #)
+        // Handle ID selector (starts with #) for input
         if (preg_match('/^#(.+)$/', $selector, $matches)) {
             $id = $matches[1];
             $escapedId = addslashes($id);
-            return "    cy.get('body').then(\$body => {\n" .
-                   "      const \$el = \$body.find('[id=\"{$id}\"]');\n" .
-                   "      if (\$el.length > 0 && \$el.is(':visible')) {\n" .
-                   "        cy.get('[id=\"{$escapedId}\"]', { timeout: 15000 }).first().clear().type('{$escapedValue}');\n" .
-                   "        cy.wait(2000);\n" .
-                   "      }\n" .
-                   "    });\n";
+            return "    cy.get('[id=\"{$escapedId}\"]').type('{$escapedValue}');\n" .
+                   "    cy.wait(2000);\n";
         }
         
         // Fallback
         $escapedSelector = addslashes($selector);
-        return "    // WARNING: Unexpected selector format\n" .
-               "    cy.get('body').then(\$body => {\n" .
-               "      if (\$body.find('" . str_replace("'", "\\'", $selector) . "').length > 0) {\n" .
-               "        cy.get('{$escapedSelector}', { timeout: 15000 }).first().clear().type('{$escapedValue}');\n" .
-               "        cy.wait(2000);\n" .
-               "      }\n" .
-               "    });\n";
+        return "    cy.get('{$escapedSelector}').type('{$escapedValue}');\n" .
+               "    cy.wait(2000);\n";
     }
-    
+
     /**
      * Generate Cypress select command for dropdown with ID or XPath selector
      */
@@ -392,36 +556,22 @@ class CodeGeneratorService
         // Handle XPATH: prefix
         if (preg_match('/^XPATH:(.+)$/', $selector, $matches)) {
             $xpath = addslashes($matches[1]);
-            return "    cy.xpath('{$xpath}', { timeout: 15000 }).then(\$el => {\n" .
-                   "      if (\$el.length > 0 && \$el.is(':visible')) {\n" .
-                   "        cy.xpath('{$xpath}').first().select('{$escapedValue}');\n" .
-                   "        cy.wait(2000);\n" .
-                   "      }\n" .
-                   "    });\n";
+            return "    cy.xpath('{$xpath}').first().select('{$escapedValue}');\n" .
+                   "    cy.wait(2000);\n";
         }
         
-        // Handle ID selector (starts with #)
+        // Handle ID selector
         if (preg_match('/^#(.+)$/', $selector, $matches)) {
             $id = $matches[1];
             $escapedId = addslashes($id);
-            return "    cy.get('body').then(\$body => {\n" .
-                   "      const \$el = \$body.find('[id=\"{$id}\"]');\n" .
-                   "      if (\$el.length > 0 && \$el.is(':visible')) {\n" .
-                   "        cy.get('[id=\"{$escapedId}\"]', { timeout: 15000 }).first().select('{$escapedValue}');\n" .
-                   "        cy.wait(2000);\n" .
-                   "      }\n" .
-                   "    });\n";
+            return "    cy.get('[id=\"{$escapedId}\"]').select('{$escapedValue}');\n" .
+                   "    cy.wait(2000);\n";
         }
         
-        // Fallback for any other selector format
+        // Fallback
         $escapedSelector = addslashes($selector);
-        return "    // WARNING: Unexpected selector format\n" .
-               "    cy.get('body').then(\$body => {\n" .
-               "      if (\$body.find('" . str_replace("'", "\\'", $selector) . "').length > 0) {\n" .
-               "        cy.get('{$escapedSelector}', { timeout: 15000 }).first().select('{$escapedValue}');\n" .
-               "        cy.wait(2000);\n" .
-               "      }\n" .
-               "    });\n";
+        return "    cy.get('{$escapedSelector}').select('{$escapedValue}');\n" .
+               "    cy.wait(2000);\n";
     }
 
     /**
@@ -474,9 +624,48 @@ class CodeGeneratorService
     {
         $deduplicated = [];
         $lastEvent = null;
+        $hasLogout = false;
 
         foreach ($events as $event) {
             $eventType = $event['type'] ?? '';
+            
+            // Detect logout action
+            if ($eventType === 'click') {
+                $text = strtolower($event['text'] ?? '');
+                if (strpos($text, 'logout') !== false || strpos($text, 'log out') !== false) {
+                    $hasLogout = true;
+                }
+            }
+            
+            // After logout detected, skip ALL login-related inputs and clicks
+            if ($hasLogout) {
+                $selector = strtolower($event['selector'] ?? '');
+                $text = strtolower($event['text'] ?? '');
+                $inputType = strtolower($event['inputType'] ?? '');
+                
+                // Skip login inputs
+                if ($eventType === 'input' && (
+                    strpos($selector, 'password') !== false || 
+                    strpos($selector, 'identifier') !== false || 
+                    strpos($selector, 'email') !== false ||
+                    strpos($selector, 'username') !== false ||
+                    $inputType === 'password' ||
+                    $inputType === 'email')) {
+                    continue;
+                }
+                
+                // Skip login/next button clicks
+                if ($eventType === 'click' && (
+                    strpos($text, 'login') !== false ||
+                    strpos($text, 'log in') !== false ||
+                    strpos($text, 'sign in') !== false ||
+                    strpos($text, 'next') !== false ||
+                    strpos($selector, 'login_btn') !== false ||
+                    strpos($selector, 'next_btn') !== false ||
+                    strpos($selector, 'signin') !== false)) {
+                    continue;
+                }
+            }
             
             // Skip all pageload events (handled separately)
             if ($eventType === 'pageload') {
@@ -541,6 +730,27 @@ class CodeGeneratorService
                 $eventType === 'click' &&
                 ($event['selector'] ?? '') === ($lastEvent['selector'] ?? '')) {
                 continue;
+            }
+            
+            // Skip duplicate clicks on same element (check ALL previous events)
+            if ($eventType === 'click' && count($deduplicated) > 0) {
+                foreach ($deduplicated as $prevEvent) {
+                    if (($prevEvent['type'] ?? '') === 'click' &&
+                        ($prevEvent['selector'] ?? '') === ($event['selector'] ?? '')) {
+                        continue 2; // Skip this duplicate click
+                    }
+                }
+            }
+            
+            // Skip duplicate input on same element (check ALL previous events)
+            if ($eventType === 'input' && count($deduplicated) > 0) {
+                foreach ($deduplicated as $prevEvent) {
+                    if (($prevEvent['type'] ?? '') === 'input' &&
+                        ($prevEvent['selector'] ?? '') === ($event['selector'] ?? '') &&
+                        ($prevEvent['value'] ?? '') === ($event['value'] ?? '')) {
+                        continue 2; // Skip this duplicate input
+                    }
+                }
             }
             
             // Skip duplicate keypress events (same key on same element)

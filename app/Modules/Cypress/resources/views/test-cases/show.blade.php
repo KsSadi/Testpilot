@@ -145,7 +145,7 @@
                 <p class="text-sm text-gray-500 mt-1">{{ $eventSessions->count() }} session(s) with {{ $eventSessions->sum('events_count') }} total events</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
-                <a href="{{ route('code-generator.index', [$project, $module, $testCase]) }}" class="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition text-sm shadow-sm">
+                <a href="{{ route('code-generator.page', [$project, $module, $testCase]) }}" class="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition text-sm shadow-sm">
                     <i class="fas fa-code mr-1"></i> Open Code Generator
                 </a>
             </div>
@@ -166,7 +166,7 @@
                         </span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('code-generator.index', [$project, $module, $testCase]) }}?session={{ $session->hash_id }}" 
+                        <a href="{{ route('code-generator.page', [$project, $module, $testCase]) }}?session={{ $session->hash_id }}" 
                            class="flex-1 bg-white border border-gray-300 hover:border-cyan-400 hover:bg-cyan-50 text-gray-700 px-3 py-1.5 rounded text-xs text-center transition">
                             <i class="fas fa-code mr-1"></i> Generate Code
                         </a>

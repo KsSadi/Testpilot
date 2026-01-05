@@ -95,10 +95,10 @@ Route::middleware(['auth'])->group(function () {
             });
             
             // Code Generator Page (New Workflow)
-            Route::get('test-cases/{testCase}/code-generator', 'RecordingController@codeGeneratorPage')->name('code-generator.index');
-            Route::post('test-cases/{testCase}/code-generator/generate', 'RecordingController@generateAndStoreCode')->name('code-generator.generate');
-            Route::post('test-cases/{testCase}/code-generator/generate-ai', 'RecordingController@generateWithAI')->name('code-generator.generate-ai');
-            Route::delete('test-cases/{testCase}/code-generator/{generatedCode}/delete', 'RecordingController@deleteGeneratedCode')->name('code-generator.delete');
+            Route::get('test-cases/{testCase}/code-generator', 'RecordingController@codeGeneratorPage')->name('code-generator.page');
+            Route::post('test-cases/{testCase}/code-generator/generate', 'RecordingController@generateAndStoreCode')->name('code-generator.generate-basic');
+            Route::post('test-cases/{testCase}/code-generator/generate-ai', 'RecordingController@generateWithAI')->name('code-generator.generate-ai-pro');
+            Route::delete('test-cases/{testCase}/code-generator/{generatedCode}/delete', 'RecordingController@deleteGeneratedCode')->name('code-generator.delete-version');
             
             // Event Session Routes (Versioned Events)
             Route::delete('test-cases/{testCase}/event-sessions/{eventSession}/delete', 'RecordingController@deleteEventSession')->name('event-sessions.delete');

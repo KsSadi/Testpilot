@@ -812,6 +812,9 @@ class RecordingController extends Controller
                 ], 500);
             }
 
+            // Check if code was truncated and fix incomplete brackets
+            $code = $this->ensureCompleteCode($code);
+
             // Store as new version with AI badge (linked to event session)
             $generatedCode = GeneratedCode::create([
                 'test_case_id' => $testCase->id,
@@ -882,6 +885,14 @@ Generate a professional, production-ready Cypress E2E test based on these record
 9. Follow Cypress best practices for E2E testing
 10. Use cy.intercept() for API calls if detected
 
+**CRITICAL - CODE COMPLETENESS:**
+- You MUST generate COMPLETE code with ALL closing brackets
+- Every { MUST have a matching }
+- Every ( MUST have a matching )
+- Every describe() and it() block MUST be properly closed with });
+- NEVER leave code truncated or incomplete
+- If the test is long, still complete it fully
+
 Generate ONLY the Cypress test code, no explanations.
 PROMPT;
     }
@@ -944,6 +955,77 @@ SYSTEM;
             }
         }
         
+        return $code;
+    }
+
+    /**
+     * Ensure generated code is complete with proper closing brackets
+     * This fixes truncated AI responses
+     */
+    protected function ensureCompleteCode(string $code): string
+    {
+        // Count opening and closing braces/parentheses
+        $openBraces = substr_count($code, '{');
+        $closeBraces = substr_count($code, '}');
+        $openParens = substr_count($code, '(');
+        $closeParens = substr_count($code, ')');
+
+        // Check if code appears truncated (missing closings)
+        $missingBraces = $openBraces - $closeBraces;
+        $missingParens = $openParens - $closeParens;
+
+        if ($missingBraces > 0 || $missingParens > 0) {
+            Log::warning('AI generated truncated code, auto-fixing', [
+                'missing_braces' => $missingBraces,
+                'missing_parens' => $missingParens
+            ]);
+
+            // Trim any incomplete line at the end
+            $code = rtrim($code);
+            
+            // Remove incomplete last line if it doesn't end with ; or { or }
+            $lines = explode("\n", $code);
+            $lastLine = trim(end($lines));
+            
+            // If last line seems incomplete (doesn't end properly), remove it
+            if (!empty($lastLine) && !preg_match('/[;{}\)]\s*$/', $lastLine)) {
+                array_pop($lines);
+                $code = implode("\n", $lines);
+                // Recalculate after removing incomplete line
+                $openBraces = substr_count($code, '{');
+                $closeBraces = substr_count($code, '}');
+                $openParens = substr_count($code, '(');
+                $closeParens = substr_count($code, ')');
+                $missingBraces = $openBraces - $closeBraces;
+                $missingParens = $openParens - $closeParens;
+            }
+
+            // Add closing brackets in the correct order
+            // Typically for Cypress: first close it() blocks, then describe()
+            $closings = '';
+            
+            // Add missing });  combinations (for it/describe arrow functions)
+            while ($missingBraces > 0 && $missingParens > 0) {
+                $closings .= "\n  });";
+                $missingBraces--;
+                $missingParens--;
+            }
+            
+            // Add any remaining braces
+            while ($missingBraces > 0) {
+                $closings .= "\n}";
+                $missingBraces--;
+            }
+            
+            // Add any remaining parentheses
+            while ($missingParens > 0) {
+                $closings .= ")";
+                $missingParens--;
+            }
+
+            $code .= $closings;
+        }
+
         return $code;
     }
 }
