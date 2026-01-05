@@ -69,19 +69,26 @@ class RecordingController extends Controller
 
             Log::info('Recording started successfully', ['sessionId' => $sessionId]);
             
+            // Get the app URL for secure WebSocket connection
+            $appUrl = config('app.url');
+            $wsProtocol = str_starts_with($appUrl, 'https') ? 'wss' : 'ws';
+            $appHost = parse_url($appUrl, PHP_URL_HOST);
+            
             // Build response with VNC info if available
             $jsonResponse = [
                 'success' => true,
                 'message' => $response['message'] ?? 'Browser launched! Start interacting with the website.',
                 'sessionId' => $sessionId,
-                'wsUrl' => $response['wsUrl'] ?? null,
+                // Use secure WebSocket through Nginx proxy
+                'wsUrl' => "{$wsProtocol}://{$appHost}/recorder-ws/{$sessionId}",
                 'browserLaunched' => true
             ];
             
             // Include VNC viewer URL if VNC is enabled (for VPS)
             if (isset($response['vncEnabled']) && $response['vncEnabled']) {
                 $jsonResponse['vncEnabled'] = true;
-                $jsonResponse['viewerUrl'] = $response['viewerUrl'];
+                // Use HTTPS URL through Nginx proxy for VNC viewer
+                $jsonResponse['viewerUrl'] = "{$appUrl}/vnc/vnc.html?autoconnect=true";
                 $jsonResponse['message'] = 'Browser launched! Click the link below to view and interact with the browser.';
             }
             

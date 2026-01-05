@@ -267,8 +267,28 @@ async function startRecording() {
             recordingSessionId = data.sessionId;
             capturedEvents = [];
             
-            // Show success message
-            showNotification('Browser launched successfully! Start interacting with the website.', 'success');
+            // Check if VNC is enabled (VPS mode) - show viewer link
+            if (data.vncEnabled && data.viewerUrl) {
+                // Show VNC viewer link for remote browser access
+                showNotification(`
+                    <div class="text-left">
+                        <p class="font-semibold mb-2">🖥️ Browser launched on server!</p>
+                        <p class="mb-2">Click the button below to view and interact with the browser:</p>
+                        <a href="${data.viewerUrl}" target="_blank" 
+                           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-external-link-alt"></i>
+                            Open Browser Viewer
+                        </a>
+                        <p class="text-xs mt-2 text-gray-400">Opens in new tab. Interact with the browser there.</p>
+                    </div>
+                `, 'success', 15000);
+                
+                // Also show a persistent banner
+                showVncViewerBanner(data.viewerUrl);
+            } else {
+                // Local mode - browser opens directly
+                showNotification('Browser launched successfully! Start interacting with the website.', 'success');
+            }
             
             // Update UI
             document.getElementById('start-recording-btn').style.display = 'none';
@@ -341,6 +361,8 @@ function startEventPolling() {
     
     const [, projectId, moduleId, testCaseId] = urlMatch;
     
+    console.log('[Event Polling] Starting polling for session:', recordingSessionId);
+    
     const pollInterval = setInterval(async () => {
         if (!recordingSessionId) {
             clearInterval(pollInterval);
@@ -348,18 +370,24 @@ function startEventPolling() {
         }
         
         try {
-            const response = await fetch(`/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/events/${recordingSessionId}`);
+            const pollUrl = `/projects/${projectId}/modules/${moduleId}/test-cases/${testCaseId}/recording/events/${recordingSessionId}`;
+            console.log('[Event Polling] Fetching:', pollUrl);
+            
+            const response = await fetch(pollUrl);
             const data = await response.json();
+            
+            console.log('[Event Polling] Response:', data);
             
             if (data.success && data.events) {
                 capturedEvents = data.events;
                 document.getElementById('events-count').textContent = data.eventsCount;
+                console.log('[Event Polling] Events count:', data.eventsCount);
                 
                 // Update event feed
                 updateEventFeed(data.events);
             }
         } catch (error) {
-            console.error('Event polling error:', error);
+            console.error('[Event Polling] Error:', error);
         }
     }, 2000);
 }
@@ -446,6 +474,9 @@ async function stopRecording() {
         const data = await response.json();
         
         if (data.success) {
+            // Hide VNC viewer banner if shown
+            hideVncViewerBanner();
+            
             // Show captured events section (NO auto-generate code)
             showCapturedEventsSection();
             
@@ -484,6 +515,9 @@ async function handleBrowserClosedAutomatically() {
     if (!recordingSessionId) return;
     
     console.log('Handling automatic browser close...');
+    
+    // Hide VNC viewer banner if shown
+    hideVncViewerBanner();
     
     // Update UI immediately
     document.getElementById('start-recording-btn').style.display = 'flex';
@@ -657,7 +691,7 @@ async function saveEventsOnly() {
     }
 }
 
-function showNotification(message, type = 'info') {
+function showNotification(message, type = 'info', duration = 3000) {
     // Simple notification - you can use your existing notification system
     const colors = {
         success: 'bg-green-500',
@@ -666,13 +700,49 @@ function showNotification(message, type = 'info') {
     };
     
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in`;
-    notification.textContent = message;
+    notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in max-w-md`;
+    notification.innerHTML = message;
     document.body.appendChild(notification);
     
     setTimeout(() => {
         notification.remove();
-    }, 3000);
+    }, duration);
+}
+
+// Show persistent VNC viewer banner during recording
+function showVncViewerBanner(viewerUrl) {
+    // Remove any existing banner
+    const existingBanner = document.getElementById('vnc-viewer-banner');
+    if (existingBanner) existingBanner.remove();
+    
+    const banner = document.createElement('div');
+    banner.id = 'vnc-viewer-banner';
+    banner.className = 'fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 shadow-lg z-50 flex items-center justify-center gap-4';
+    banner.innerHTML = `
+        <div class="flex items-center gap-3">
+            <i class="fas fa-desktop text-xl animate-pulse"></i>
+            <span class="font-medium">Browser running on server</span>
+        </div>
+        <a href="${viewerUrl}" target="_blank" 
+           class="inline-flex items-center gap-2 bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-semibold transition-colors shadow">
+            <i class="fas fa-external-link-alt"></i>
+            Open Browser Viewer
+        </a>
+        <span class="text-blue-200 text-sm">Click to view & interact with the browser</span>
+    `;
+    document.body.prepend(banner);
+    
+    // Add padding to body to account for banner
+    document.body.style.paddingTop = '60px';
+}
+
+// Hide VNC viewer banner
+function hideVncViewerBanner() {
+    const banner = document.getElementById('vnc-viewer-banner');
+    if (banner) {
+        banner.remove();
+        document.body.style.paddingTop = '';
+    }
 }
 </script>
 
