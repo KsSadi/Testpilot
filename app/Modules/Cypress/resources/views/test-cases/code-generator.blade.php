@@ -145,7 +145,7 @@
                             </button>
                             
                             {{-- AI Code Generator --}}
-                            <button onclick="generateAICode()" id="ai-generate-btn" class="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-700 hover:via-indigo-700 hover:to-cyan-600 text-white font-semibold px-4 py-3 rounded-lg transition duration-200 shadow-lg flex items-center justify-center gap-2 relative overflow-hidden group">
+                            {{-- <button onclick="generateAICode()" id="ai-generate-btn" class="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-700 hover:via-indigo-700 hover:to-cyan-600 text-white font-semibold px-4 py-3 rounded-lg transition duration-200 shadow-lg flex items-center justify-center gap-2 relative overflow-hidden group">
                                 <div class="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-indigo-400/20 to-cyan-400/20 animate-pulse"></div>
                                 <i class="fas fa-robot relative z-10"></i>
                                 <span class="relative z-10">Generate with AI</span>
@@ -154,7 +154,7 @@
                             <p class="text-xs text-gray-500 text-center">
                                 <i class="fas fa-sparkles text-purple-500 mr-1"></i>
                                 AI generates optimized, industry-standard code
-                            </p>
+                            </p> --}}
                         </div>
                     @else
                         <div class="text-center py-8">
@@ -183,6 +183,39 @@
                 </div>
                 <div class="p-4">
                     @if($generatedCodes->count() > 0)
+                        {{-- Warning Notice for Generated Code --}}
+                        <div class="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 mb-4 flex items-start gap-3 shadow-sm">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-amber-600 text-xl mt-0.5"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-amber-800 font-semibold text-sm mb-1">
+                                    <i class="fas fa-shield-alt mr-1"></i>System Generated Code - Review Required
+                                </h4>
+                                <p class="text-amber-700 text-xs leading-relaxed mb-2">
+                                    This code is automatically generated from recorded browser interactions. While it provides a solid foundation, 
+                                    <strong>please review and test thoroughly</strong> before using in production environments.
+                                </p>
+                                <ul class="text-amber-700 text-xs space-y-1 ml-4">
+                                    <li class="flex items-start gap-1">
+                                        <i class="fas fa-check-circle text-amber-600 mt-0.5"></i>
+                                        <span>Verify selectors work across different scenarios</span>
+                                    </li>
+                                    <li class="flex items-start gap-1">
+                                        <i class="fas fa-check-circle text-amber-600 mt-0.5"></i>
+                                        <span>Add appropriate assertions and validations</span>
+                                    </li>
+                                    <li class="flex items-start gap-1">
+                                        <i class="fas fa-check-circle text-amber-600 mt-0.5"></i>
+                                        <span>Customize error handling for your use case</span>
+                                    </li>
+                                    <li class="flex items-start gap-1">
+                                        <i class="fas fa-check-circle text-amber-600 mt-0.5"></i>
+                                        <span>Test in your actual environment before deployment</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                         <div class="space-y-4">
                             @foreach($generatedCodes as $code)
                                 <div class="border border-gray-200 rounded-lg overflow-hidden" id="code-block-{{ $code->hash_id }}">
@@ -203,6 +236,12 @@
                                             </span>
                                         </div>
                                         <div class="flex items-center gap-2">
+                                            @if(!$code->is_ai_generated)
+                                                <button onclick="polishWithAI('{{ $code->hash_id }}')" class="bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-500 hover:from-purple-600 hover:via-indigo-600 hover:to-cyan-600 text-white px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1 shadow-sm transition" title="Polish this code with AI">
+                                                    <i class="fas fa-magic text-[10px]"></i>
+                                                    Polish with AI
+                                                </button>
+                                            @endif
                                             <button onclick="copyCode('{{ $code->hash_id }}')" class="text-gray-500 hover:text-cyan-600 p-1.5 rounded hover:bg-gray-100 transition" title="Copy Code">
                                                 <i class="fas fa-copy"></i>
                                             </button>
@@ -420,6 +459,68 @@ function downloadCode(hashId, filename) {
     a.download = filename.replace(/[^a-z0-9]/gi, '_') + '.cy.js';
     a.click();
     showNotification('Code downloaded!', 'success');
+}
+
+/**
+ * Polish existing basic code with AI
+ * This takes the working basic code and optimizes it while preserving correct cy.origin() handling
+ */
+async function polishWithAI(codeHashId) {
+    const codeEl = document.getElementById('code-content-' + codeHashId);
+    const codeBlock = document.getElementById('code-block-' + codeHashId);
+    
+    if (!codeEl) {
+        showNotification('Code not found', 'error');
+        return;
+    }
+    
+    const basicCode = codeEl.textContent;
+    
+    // Find the polish button
+    const polishBtn = codeBlock.querySelector('button[onclick*="polishWithAI"]');
+    if (!polishBtn) return;
+    
+    const originalBtnHtml = polishBtn.innerHTML;
+    polishBtn.disabled = true;
+    polishBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-[10px]"></i> Polishing...';
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const polishUrl = '{{ route("code-generator.polish-ai", [$project, $module, $testCase]) }}';
+    
+
+    
+    try {
+        const response = await fetch(polishUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                code_hash_id: codeHashId,
+                basic_code: basicCode
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            polishBtn.innerHTML = '<i class="fas fa-check text-[10px]"></i> Polished!';
+            showNotification('🎉 Code polished with AI! New version created.', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showNotification(data.message || 'AI polish failed', 'error');
+            polishBtn.disabled = false;
+            polishBtn.innerHTML = originalBtnHtml;
+        }
+    } catch (error) {
+        console.error('Polish AI error:', error);
+        showNotification('Error: ' + error.message, 'error');
+        polishBtn.disabled = false;
+        polishBtn.innerHTML = originalBtnHtml;
+    }
 }
 
 async function deleteCode(hashId) {

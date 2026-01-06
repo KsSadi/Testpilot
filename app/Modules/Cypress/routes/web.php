@@ -98,6 +98,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('test-cases/{testCase}/code-generator', 'RecordingController@codeGeneratorPage')->name('code-generator.page');
             Route::post('test-cases/{testCase}/code-generator/generate', 'RecordingController@generateAndStoreCode')->name('code-generator.generate-basic');
             Route::post('test-cases/{testCase}/code-generator/generate-ai', 'RecordingController@generateWithAI')->name('code-generator.generate-ai-pro');
+            Route::post('test-cases/{testCase}/code-generator/polish-ai', 'RecordingController@polishWithAI')->name('code-generator.polish-ai');
             Route::delete('test-cases/{testCase}/code-generator/{generatedCode}/delete', 'RecordingController@deleteGeneratedCode')->name('code-generator.delete-version');
             
             // Event Session Routes (Versioned Events)

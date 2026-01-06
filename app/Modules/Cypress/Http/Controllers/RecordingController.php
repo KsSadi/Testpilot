@@ -731,6 +731,368 @@ class RecordingController extends Controller
     }
 
     /**
+     * Polish existing basic code with AI
+     * This preserves correct cy.origin() handling while optimizing the code
+     */
+    public function polishWithAI(Request $request, $project, $module, TestCase $testCase)
+    {
+        try {
+            // Check permission
+            if ($testCase->created_by !== auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            $basicCode = $request->input('basic_code');
+            $codeHashId = $request->input('code_hash_id');
+
+            if (empty($basicCode)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No code provided to polish'
+                ], 400);
+            }
+
+            Log::info('Polishing code with AI', [
+                'test_case_id' => $testCase->id,
+                'code_hash_id' => $codeHashId,
+                'code_length' => strlen($basicCode)
+            ]);
+
+            // Build the polish prompt
+            $prompt = $this->buildPolishPrompt($testCase, $basicCode);
+
+            // Call AI Service
+            $aiResponse = AI::withTemperature(0.2) // Lower temperature for more consistent output
+                ->withMaxTokens(16000)
+                ->generateCode($prompt, 'javascript', [
+                    'system_prompt' => $this->getPolishSystemPrompt()
+                ]);
+
+            if (!$aiResponse['success'] ?? false) {
+                Log::error('AI polish failed', ['response' => $aiResponse]);
+                return response()->json([
+                    'success' => false,
+                    'message' => $aiResponse['error'] ?? 'AI service error'
+                ], 500);
+            }
+
+            // Extract code from AI response
+            $polishedCode = $this->extractCodeFromAIResponse($aiResponse['content'] ?? '');
+
+            if (empty($polishedCode)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'AI generated empty response'
+                ], 500);
+            }
+
+            // Ensure code is complete
+            $polishedCode = $this->ensureCompleteCode($polishedCode);
+
+            // Get the original generated code to link event session
+            $originalCode = null;
+            if ($codeHashId) {
+                $decoded = Hashids::decode($codeHashId);
+                if (!empty($decoded)) {
+                    $originalCode = GeneratedCode::find($decoded[0]);
+                }
+            }
+
+            // Store as new AI-polished version
+            $generatedCode = GeneratedCode::create([
+                'test_case_id' => $testCase->id,
+                'event_session_id' => $originalCode?->event_session_id,
+                'code' => $polishedCode,
+                'is_ai_generated' => true,
+                'generated_at' => Carbon::now()
+            ]);
+
+            Log::info('AI polished code stored', [
+                'test_case_id' => $testCase->id,
+                'generated_code_id' => $generatedCode->id,
+                'tokens_used' => $aiResponse['usage']['total_tokens'] ?? 0
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Code polished with AI successfully!',
+                'generated_code' => [
+                    'id' => $generatedCode->hash_id,
+                    'code' => $polishedCode,
+                    'version_label' => $generatedCode->version_label . ' (AI Polished)',
+                    'generated_at' => $generatedCode->formatted_generated_at,
+                    'ai_generated' => true
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('AI polish failed: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'AI polish failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Build the prompt for AI polish (optimizing existing code)
+     */
+    protected function buildPolishPrompt(TestCase $testCase, string $basicCode): string
+    {
+        return <<<PROMPT
+⚠️⚠️⚠️ CRITICAL WARNING ⚠️⚠️⚠️
+If you see cy.origin() blocks in the code below, you MUST preserve them EXACTLY.
+Changing cy.origin() will cause "USERNAME is not defined" errors.
+Copy/paste cy.origin() blocks WITHOUT any changes!
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
+Polish and optimize this existing Cypress E2E test code following **Cypress Industry Best Practices**.
+The code is already working - make it production-ready, maintainable, and following professional standards.
+
+**Test Case:** {$testCase->name}
+**Description:** {$testCase->description}
+
+**EXISTING WORKING CODE TO POLISH:**
+```javascript
+{$basicCode}
+```
+
+**═══════════════════════════════════════════════════════════════════════**
+**⚠️ CRITICAL: cy.origin() PATTERN - NEVER CHANGE THIS! ⚠️**
+**═══════════════════════════════════════════════════════════════════════**
+
+If you see this pattern in the original code, PRESERVE IT EXACTLY:
+
+**CORRECT PATTERN (from original code):**
+```javascript
+const USERNAME = 'user@test.com';
+const PASSWORD = 'secret123';
+
+cy.origin('https://auth.site.com', { args: { USERNAME, PASSWORD } }, ({ USERNAME, PASSWORD }) => {
+    cy.get('#identifier').type(USERNAME);
+    cy.get('#password').type(PASSWORD);
+});
+```
+
+**WHAT YOU MUST PRESERVE:**
+✅ Keep `const USERNAME = 'user@test.com';` BEFORE cy.origin()
+✅ Keep `{ args: { USERNAME, PASSWORD } }` in cy.origin()
+✅ Keep `({ USERNAME, PASSWORD }) =>` destructuring
+✅ DO NOT add `const USERNAME =` inside the cy.origin() callback
+
+**WRONG - WILL CAUSE ERROR:**
+```javascript
+// ❌ WRONG: Removed args
+cy.origin('https://auth.site.com', () => {
+    cy.get('#identifier').type(USERNAME); // ERROR: USERNAME not defined
+});
+
+// ❌ WRONG: Redeclared variable inside
+cy.origin('https://auth.site.com', { args: { USERNAME } }, ({ USERNAME }) => {
+    const USERNAME = 'user@test.com'; // ERROR: already declared
+});
+
+// ❌ WRONG: Missing destructuring
+cy.origin('https://auth.site.com', { args: { USERNAME } }, () => {
+    cy.get('#identifier').type(USERNAME); // ERROR: USERNAME not defined
+});
+```
+
+**═══════════════════════════════════════════════════════════════════════**
+
+**OTHER CRITICAL RULES - DO NOT BREAK:**
+1. PRESERVE all cy.origin() blocks EXACTLY - copy/paste them unchanged
+2. PRESERVE all variable passing via args: {} - this is mandatory for Cypress
+3. PRESERVE the overall test logic and flow
+4. DO NOT move variables inside cy.origin() if they're passed via args
+5. DO NOT remove any cy.origin() blocks
+6. DO NOT declare variables that are already declared
+7. DO NOT use 'baseUrl' as a variable name - use APP_URL or BASE_URL instead
+8. **DO NOT add new URL assertions** - only keep URL assertions that exist in the original code
+9. **DO NOT change existing URL paths** - if code has '/dashboard', keep '/dashboard'
+10. **DO NOT guess or invent assertions** - only add assertions for visible elements/states
+
+**CRITICAL: URL ASSERTIONS**
+- If the original code has `cy.url().should('include', '/dashboard')` → KEEP '/dashboard'
+- DO NOT change '/dashboard' to '/bida-registration' or any other path
+- DO NOT add `cy.url().should()` if it wasn't in the original code
+- Only add URL assertions if the original code navigates and you can see the exact path
+- When in doubt, DO NOT add URL assertions
+
+**ENSURE ERROR HANDLER EXISTS:**
+If not already present, add this at the start of describe():
+```javascript
+Cypress.on('uncaught:exception', (err) => {
+  const ignore = ['baseUrl', 'already been declared', 'ResizeObserver', 'Script error', 'NetworkError'];
+  return !ignore.some(p => err.message.includes(p));
+});
+```
+
+**═══════════════════════════════════════════════════════════════════════**
+**CYPRESS INDUSTRY BEST PRACTICES TO APPLY:**
+**═══════════════════════════════════════════════════════════════════════**
+
+**1. TEST STRUCTURE (AAA Pattern):**
+   - Arrange: Setup/visit at top (beforeEach)
+   - Act: User interactions in logical groups
+   - Assert: Verify outcomes after actions
+
+**2. SELECTOR PRIORITY (Most Stable → Least Stable):**
+   - data-testid, data-cy, data-test (best - won't change)
+   - #id (good - usually stable)
+   - [name="..."] (good for forms)
+   - [aria-label="..."] (good for accessibility)
+   - .class (avoid if possible - can change)
+   - tag (avoid - too generic)
+   - :contains("text") (use with .first())
+
+**3. COMMAND CHAINING:**
+   - Chain related commands: cy.get().should().click()
+   - Use aliases for repeated elements: cy.get('#form').as('loginForm')
+   - Reference aliases: cy.get('@loginForm').find('input')
+
+**4. ASSERTIONS:**
+   - Always assert after critical actions
+   - Use specific assertions: .should('have.text', 'exact') over .should('contain')
+   - **ONLY preserve URL assertions from original code** - do NOT add new ones
+   - **DO NOT change URL paths** - keep exact paths from original code
+   - Verify element state: .should('be.visible'), .should('be.enabled')
+   - Only add assertions for things you can verify from the original code
+
+**5. WAITS (Anti-Pattern Avoidance):**
+   - AVOID: cy.wait(5000) - arbitrary waits
+   - USE: cy.get().should('be.visible') - implicit waits
+   - USE: cy.intercept().as('api'); cy.wait('@api') - wait for API
+   - OK: cy.wait(500-1000) only after cy.origin() for redirect
+
+**6. VARIABLES & CONSTANTS:**
+   - Define at top of describe(): const APP_URL = '...'
+   - Use SCREAMING_SNAKE_CASE for constants
+   - Group related constants together
+   - Use descriptive names: LOGIN_USERNAME not USER
+
+**7. LOGGING & DOCUMENTATION:**
+   - cy.log('Step N: Description') for each major action
+   - Add comments for complex logic
+   - Document why, not what
+
+**8. ERROR HANDLING:**
+   - Include global uncaught:exception handler
+   - Add .should('exist') before optional elements
+   - Use conditional checks: cy.get('body').then((\$body) => { if (\$body.find('.modal').length) {...} })
+
+**9. CODE ORGANIZATION:**
+   - One describe() per feature/flow
+   - One it() per test scenario (or comprehensive flow)
+   - Use beforeEach() for common setup
+   - Group related actions with comment headers
+
+**10. PERFORMANCE:**
+    - Minimize cy.wait() usage
+    - Use .first() to avoid multiple element issues
+    - Don't over-assert (slow tests)
+
+**OUTPUT FORMAT:**
+Return ONLY the complete polished JavaScript code.
+- No markdown code fences (```)
+- No explanations before or after
+- Start with describe() and end with });
+- Production-ready, industry-standard code
+PROMPT;
+    }
+
+    /**
+     * Get the system prompt for AI polish
+     */
+    protected function getPolishSystemPrompt(): string
+    {
+        return <<<SYSTEM
+You are a **Senior QA Automation Engineer** specializing in Cypress E2E testing.
+Your task is to POLISH existing working code into **production-ready, industry-standard** test code.
+
+⚠️⚠️⚠️ CRITICAL RULE #1: NEVER TOUCH cy.origin() BLOCKS ⚠️⚠️⚠️
+If you see cy.origin() in the code, COPY IT EXACTLY AS IS.
+DO NOT remove args, DO NOT change destructuring, DO NOT modify it at all.
+Breaking this rule causes "USERNAME is not defined" errors.
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
+=== YOUR EXPERTISE ===
+- 10+ years of test automation experience
+- Cypress official documentation contributor
+- Expert in testing best practices (AAA pattern, Page Object Model concepts)
+- Focus on maintainability, readability, and reliability
+
+=== CRITICAL: DO NOT BREAK WORKING CODE ===
+The code you receive is ALREADY WORKING. Improve it WITHOUT breaking anything.
+
+**MOST COMMON MISTAKE TO AVOID:**
+- DO NOT modify cy.origin() blocks in ANY way
+- DO NOT remove { args: { ... } } from cy.origin()
+- DO NOT remove ({ VAR1, VAR2 }) => destructuring
+- DO NOT add cy.url().should('include', '/some-path') unless it's in the original code
+- DO NOT change URL paths (if original has '/dashboard', keep '/dashboard')
+- DO NOT guess what URLs should be - preserve exact paths from original
+- DO NOT invent assertions - only enhance what exists
+
+=== RULES FOR cy.origin() BLOCKS (ABSOLUTELY NEVER CHANGE) ===
+When you see this pattern, PRESERVE IT EXACTLY:
+```
+cy.origin('https://site.com', { args: { VAR } }, ({ VAR }) => {
+    // code using VAR
+});
+```
+
+1. Keep variable declarations BEFORE cy.origin()
+2. Keep { args: { VAR } } - this passes variables into cy.origin()
+3. Keep ({ VAR }) => destructuring - this receives the variables
+4. DO NOT add const/let inside cy.origin() for args variables
+5. DO NOT remove any part of the cy.origin() structure
+
+=== INDUSTRY STANDARDS TO APPLY ===
+
+**1. AAA Pattern:**
+   - Arrange (setup), Act (interactions), Assert (verify)
+
+**2. Selector Priority:**
+   data-testid > #id > [name] > [aria-label] > .class
+   Always use .first() with :contains() or class selectors
+
+**3. Assertions After Actions:**
+   - **PRESERVE existing URL assertions** - do NOT change paths
+   - **DO NOT add new cy.url() assertions** unless clearly needed
+   - Verify element state after interactions (.should('be.visible'))
+   - Use specific assertions (.should('have.text') over .contain())
+
+**4. Avoid Anti-Patterns:**
+   - NO arbitrary cy.wait(5000) - use implicit waits
+   - NO flaky selectors (index-based, nth-child)
+   - NO hard-coded values scattered in code
+
+**5. Code Organization:**
+   - Constants at top (SCREAMING_SNAKE_CASE)
+   - Logical grouping with comment headers
+   - cy.log() for step documentation
+
+**6. Error Resilience:**
+   - Global uncaught:exception handler
+   - .should('be.visible') before interactions
+   - .filter(':visible').first() for ambiguous selectors
+
+=== OUTPUT FORMAT ===
+Return ONLY executable JavaScript code.
+- No markdown fences (```)
+- No explanations before/after
+- Complete, working code
+- Start with describe(), end with });
+SYSTEM;
+    }
+
+    /**
      * Generate optimized Cypress code using AI
      */
     public function generateWithAI(Request $request, $project, $module, TestCase $testCase)
@@ -889,6 +1251,58 @@ Generate a professional, production-ready Cypress E2E test based on these record
 6. Include ALL steps from the recorded events
 7. If the test has 50+ steps, still complete ALL of them
 
+**CRITICAL: MUST ADD ERROR SUPPRESSION:**
+At the start of describe(), ALWAYS add this global error handler:
+```javascript
+describe('Test Name', () => {
+  // Global handler to suppress common third-party errors
+  Cypress.on('uncaught:exception', (err) => {
+    const ignoredPatterns = [
+      'baseUrl', 'has already been declared', 'ResizeObserver',
+      'Script error', 'NetworkError', 'Load failed', 'ChunkLoadError',
+      'cancelled', 'TypeError', 'Cannot read prop'
+    ];
+    if (ignoredPatterns.some(p => err.message.includes(p))) {
+      return false;
+    }
+    return true;
+  });
+  // ... rest of test
+});
+```
+
+**CRITICAL: AVOID DUPLICATE VARIABLE DECLARATIONS:**
+- DO NOT declare the same variable twice (const, let, var)
+- DO NOT use 'baseUrl' as a variable name (it's often declared by third-party scripts)
+- Use unique names like BASE_URL, LOGIN_URL, APP_URL instead
+- Variables in args destructuring ARE declared - don't redeclare them inside
+
+**CRITICAL: cy.origin() VARIABLE HANDLING:**
+When using cy.origin() for cross-origin pages, you MUST pass variables via args:
+- Variables defined OUTSIDE cy.origin() cannot be accessed inside
+- ALWAYS pass needed variables via { args: { VAR1, VAR2 } }
+- The callback MUST destructure args: ({ VAR1, VAR2 }) => { ... }
+- DO NOT redeclare destructured variables with const/let inside the callback
+
+CORRECT PATTERN:
+```javascript
+const USERNAME = 'user@example.com';
+const PASSWORD = 'secret123';
+
+cy.origin('https://login.example.com', { args: { USERNAME, PASSWORD } }, ({ USERNAME, PASSWORD }) => {
+    // DO NOT write: const USERNAME = 'something'; // ERROR: already declared!
+    cy.get('#identifier').type(USERNAME);
+    cy.get('#password').type(PASSWORD);
+});
+```
+
+WRONG (causes "already declared" error):
+```javascript
+cy.origin('https://login.example.com', { args: { USERNAME } }, ({ USERNAME }) => {
+    const USERNAME = 'test'; // ERROR: Identifier 'USERNAME' has already been declared
+});
+```
+
 **Code Quality Requirements:**
 1. Use constants for credentials and test data at the top
 2. Use clear, descriptive step logging with cy.log()
@@ -950,30 +1364,63 @@ You are an expert Cypress E2E test automation engineer. Your #1 priority is gene
    - Prefer IDs and data attributes for selectors
    - Add comments for complex logic
 
-4. **Output Format**
+4. **MANDATORY: Global Error Handler**
+   ALWAYS add this at the start of describe():
+   ```
+   Cypress.on('uncaught:exception', (err) => {
+     const ignore = ['baseUrl', 'already been declared', 'ResizeObserver', 'Script error', 'NetworkError'];
+     return !ignore.some(p => err.message.includes(p));
+   });
+   ```
+
+5. **CRITICAL: No Duplicate Variables**
+   - NEVER declare the same variable twice
+   - NEVER use 'baseUrl' as a variable name (conflicts with third-party scripts)
+   - Use unique names: BASE_URL, APP_URL, LOGIN_URL
+   - Destructured args variables ARE declared - don't redeclare inside callback
+
+6. **CRITICAL: cy.origin() Variable Passing**
+   - Variables from outside cy.origin() CANNOT be accessed inside
+   - ALWAYS pass variables via args: { args: { VAR1, VAR2 } }
+   - ALWAYS destructure in callback: ({ VAR1, VAR2 }) => { ... }
+   - DO NOT redeclare destructured variables inside the callback!
+   
+   CORRECT:
+   const USERNAME = 'test';
+   cy.origin('https://auth.site.com', { args: { USERNAME } }, ({ USERNAME }) => {
+       // USERNAME is already declared via destructuring - just use it!
+       cy.get('#user').type(USERNAME);
+   });
+   
+   WRONG (causes "already declared" error):
+   cy.origin('https://auth.site.com', { args: { USERNAME } }, ({ USERNAME }) => {
+       const USERNAME = 'test'; // ERROR: already declared!
+   });
+
+7. **Output Format**
    - Return ONLY executable JavaScript code
-   - NO markdown code fences (```)
+   - NO markdown code fences
    - NO explanations or comments outside the code
    - NO placeholder text like "... rest of code ..."
    - Just complete, working Cypress test code
 
-=== EXAMPLE STRUCTURE ===
+=== REQUIRED STRUCTURE ===
 describe('Test Name', () => {
-  const CONSTANT = 'value';
+  // MUST include: Global error handler
+  Cypress.on('uncaught:exception', (err) => {
+    const ignore = ['baseUrl', 'already been declared', 'ResizeObserver', 'Script error'];
+    return !ignore.some(p => err.message.includes(p));
+  });
+
+  const APP_URL = 'https://example.com'; // Use APP_URL not baseUrl!
   
   beforeEach(() => {
-    cy.visit(URL);
+    cy.visit(APP_URL);
   });
   
   it('should complete the flow', () => {
-    cy.log('Step 1: Click button that may have hidden mobile duplicate');
+    cy.log('Step 1: Click button');
     cy.get('button.btn:contains("Click Me")').filter(':visible').first().click();
-    
-    cy.log('Step 2: Fill input with unique ID');
-    cy.get('#unique-id').should('be.visible').type('text');
-    
-    cy.log('Step 3: Select from dropdown with multiple matches');
-    cy.get('a.dropdown-item:contains("Option")').filter(':visible').first().click();
     // ... ALL steps ...
   });
 });
