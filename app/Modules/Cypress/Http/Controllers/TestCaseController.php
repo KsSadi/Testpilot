@@ -562,7 +562,6 @@ class TestCaseController extends Controller
             $eventData = json_decode($event->event_data, true);
             if ($eventData && isset($eventData['selectors']['xpath'])) {
                 $selectors = $eventData['selectors'];
-                // Check if xpath will be used (no better selector available)
                 if (empty($selectors['testId']) && empty($selectors['id']) &&
                     empty($selectors['name']) && empty($selectors['ariaLabel']) &&
                     empty($selectors['placeholder'])) {
@@ -572,72 +571,318 @@ class TestCaseController extends Controller
             }
         }
 
+        // STEP 1: Deduplicate events first
+        $deduplicatedEvents = $this->deduplicateEventsForCodeGen($events);
+        
+        // STEP 2: Build domain sequence from events (fully dynamic)
+        $domainSequence = [];
+        foreach ($deduplicatedEvents as $eventItem) {
+            $event = $eventItem['event'];
+            $url = $event->url ?? null;
+            if ($url) {
+                $domain = parse_url($url, PHP_URL_HOST);
+                if ($domain) {
+                    $domainSequence[] = $domain;
+                }
+            }
+        }
+        
+        // Get unique domains in order of first appearance
+        $allDomains = array_unique($domainSequence);
+        $startDomain = reset($allDomains) ?: null; // First domain is starting point
+        
+        // Get first URL for cy.visit()
+        $firstUrl = null;
+        foreach ($deduplicatedEvents as $eventItem) {
+            if ($eventItem['event']->url) {
+                $firstUrl = $eventItem['event']->url;
+                break;
+            }
+        }
+
+        // Generate header comments
         $code = "// Auto-generated Cypress Test\n";
         $code .= "// Project: {$project->name}\n";
         $code .= "// Module: {$module->name}\n";
         $code .= "// Test Case: {$testCase->name}\n";
         $code .= "// Generated: " . now()->format('Y-m-d H:i:s') . "\n";
+        
+        if (count($allDomains) > 1) {
+            $code .= "// Domains visited: " . implode(' → ', $allDomains) . "\n";
+        }
 
         if ($usesXpath) {
             $code .= "//\n";
             $code .= "// NOTE: This test uses XPath selectors.\n";
-            $code .= "// Install cypress-xpath plugin:\n";
-            $code .= "//   npm install -D cypress-xpath\n";
-            $code .= "// Then add to cypress/support/e2e.js:\n";
-            $code .= "//   require('cypress-xpath')\n";
-            $code .= "//\n";
+            $code .= "// Install: npm install -D cypress-xpath\n";
+            $code .= "// Add to cypress/support/e2e.js: require('cypress-xpath')\n";
         }
 
         $code .= "\n";
-
         $code .= "describe('{$testCase->name}', () => {\n";
+        
+        // Global error suppression
+        $code .= "  // Global handler to suppress common third-party errors\n";
+        $code .= "  Cypress.on('uncaught:exception', (err) => {\n";
+        $code .= "    const ignoredPatterns = [\n";
+        $code .= "      'baseUrl', 'has already been declared', 'ResizeObserver',\n";
+        $code .= "      'Script error', 'NetworkError', 'Load failed', 'ChunkLoadError',\n";
+        $code .= "      'cancelled', 'TypeError', 'Cannot read prop'\n";
+        $code .= "    ];\n";
+        $code .= "    if (ignoredPatterns.some(p => err.message.includes(p))) {\n";
+        $code .= "      return false;\n";
+        $code .= "    }\n";
+        $code .= "    return true;\n";
+        $code .= "  });\n\n";
 
-        // Get the first URL from events
-        $firstUrl = null;
-        foreach ($events as $event) {
-            if ($event->url) {
-                $firstUrl = $event->url;
-                break;
-            }
-        }
-
+        // Visit starting URL
         if ($firstUrl) {
             $code .= "  beforeEach(() => {\n";
-            $code .= "    cy.visit('{$firstUrl}')\n";
-            $code .= "  })\n\n";
+            $code .= "    cy.visit('{$firstUrl}');\n";
+            $code .= "  });\n\n";
         }
 
-        $code .= "  it('should execute test steps', () => {\n";
+        $code .= "  it('should execute recorded test steps', () => {\n";
 
-        $previousUrl = $firstUrl;
-
-        foreach ($events as $index => $event) {
-            $eventData = json_decode($event->event_data, true);
-
-            // Skip if event data is invalid
-            if (!$eventData) {
-                continue;
+        // STEP 3: Group consecutive events by domain
+        $eventGroups = [];
+        $currentDomain = $startDomain;
+        $currentGroup = ['domain' => $currentDomain, 'events' => []];
+        
+        foreach ($deduplicatedEvents as $eventItem) {
+            $event = $eventItem['event'];
+            $eventUrl = $event->url ?? null;
+            $eventDomain = $eventUrl ? parse_url($eventUrl, PHP_URL_HOST) : $currentDomain;
+            
+            // Domain changed - save current group and start new one
+            if ($eventDomain && $eventDomain !== $currentDomain) {
+                if (!empty($currentGroup['events'])) {
+                    $eventGroups[] = $currentGroup;
+                }
+                $currentDomain = $eventDomain;
+                $currentGroup = ['domain' => $currentDomain, 'events' => []];
             }
-
-            // Check if URL changed (navigation)
-            if ($event->url && $event->url !== $previousUrl) {
-                $code .= "    // Navigation detected\n";
-                $code .= "    cy.url().should('include', '" . parse_url($event->url, PHP_URL_PATH) . "')\n";
-                $previousUrl = $event->url;
-            }
-
-            // Convert event to Cypress command
-            $cypressCommand = $this->eventToCypressCommand($event, $eventData);
-
-            if ($cypressCommand) {
-                $code .= $cypressCommand;
-            }
+            
+            $currentGroup['events'][] = $eventItem;
+        }
+        
+        // Add final group
+        if (!empty($currentGroup['events'])) {
+            $eventGroups[] = $currentGroup;
         }
 
-        $code .= "  })\n";
-        $code .= "})\n";
+        // STEP 4: Generate code for each domain group
+        $isFirstGroup = true;
+        foreach ($eventGroups as $groupIndex => $group) {
+            $groupDomain = $group['domain'];
+            $groupEvents = $group['events'];
+            
+            // Determine if this is cross-origin (different from starting domain)
+            $isCrossOrigin = $groupDomain && $startDomain && $groupDomain !== $startDomain;
+            
+            if ($isCrossOrigin) {
+                // Get protocol from first event URL in this group, default to https
+                $protocol = 'https';
+                foreach ($groupEvents as $evt) {
+                    if ($evt['event']->url) {
+                        $parsedProtocol = parse_url($evt['event']->url, PHP_URL_SCHEME);
+                        if ($parsedProtocol) {
+                            $protocol = $parsedProtocol;
+                            break;
+                        }
+                    }
+                }
+                
+                $code .= "\n    // ══════════════════════════════════════════════════════════\n";
+                $code .= "    // CROSS-ORIGIN: {$groupDomain}\n";
+                $code .= "    // ══════════════════════════════════════════════════════════\n";
+                $code .= "    cy.origin('{$protocol}://{$groupDomain}', () => {\n";
+                $code .= "      // Suppress errors from this domain\n";
+                $code .= "      cy.on('uncaught:exception', () => false);\n\n";
+                
+                foreach ($groupEvents as $eventItem) {
+                    $cmd = $this->eventToCypressCommandForOrigin($eventItem['event'], $eventItem['eventData'], '      ');
+                    if ($cmd) $code .= $cmd;
+                }
+                
+                $code .= "    });\n";
+                $code .= "    cy.wait(2000); // Wait for redirect\n";
+            } else {
+                // Main domain - generate normal commands
+                if (!$isFirstGroup) {
+                    $code .= "\n    // Back on: {$groupDomain}\n";
+                }
+                
+                foreach ($groupEvents as $eventItem) {
+                    $cmd = $this->eventToCypressCommand($eventItem['event'], $eventItem['eventData']);
+                    if ($cmd) $code .= $cmd;
+                }
+            }
+            
+            $isFirstGroup = false;
+        }
+
+        $code .= "  });\n";
+        $code .= "});\n";
 
         return $code;
+    }
+
+    /**
+     * Deduplicate events - keep only last input value per field, remove redundant clicks
+     */
+    private function deduplicateEventsForCodeGen($events)
+    {
+        $allEvents = [];
+        foreach ($events as $event) {
+            $eventData = json_decode($event->event_data, true);
+            if (!$eventData) continue;
+            
+            $selector = $eventData['cypressSelector'] ?? $event->selector ?? null;
+            $allEvents[] = [
+                'event' => $event,
+                'eventData' => $eventData,
+                'selector' => $selector,
+                'domain' => $event->url ? parse_url($event->url, PHP_URL_HOST) : null
+            ];
+        }
+        
+        // Find last input event index for each selector+domain combination
+        $lastInputPerField = [];
+        foreach ($allEvents as $index => $item) {
+            $eventType = strtolower($item['event']->event_type);
+            $selector = $item['selector'];
+            $domain = $item['domain'];
+            
+            if ($eventType === 'input' && $selector) {
+                $key = $domain . '::' . $selector;
+                $lastInputPerField[$key] = $index;
+            }
+        }
+        
+        // Mark duplicate inputs to skip
+        $skipIndices = [];
+        foreach ($lastInputPerField as $key => $lastIndex) {
+            list($domain, $selector) = explode('::', $key, 2);
+            foreach ($allEvents as $index => $item) {
+                if ($index !== $lastIndex && 
+                    strtolower($item['event']->event_type) === 'input' && 
+                    $item['selector'] === $selector &&
+                    $item['domain'] === $domain) {
+                    $skipIndices[$index] = true;
+                }
+            }
+        }
+        
+        // Build result without duplicates
+        $result = [];
+        foreach ($allEvents as $index => $item) {
+            if (!isset($skipIndices[$index])) {
+                $result[] = $item;
+            }
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Generate Cypress command for cross-origin context
+     */
+    private function eventToCypressCommandForOrigin($event, $eventData, $indent = '      ')
+    {
+        $eventType = strtolower($event->event_type);
+        $selector = $this->getBestSelectorSimple($eventData);
+        
+        if (!$selector && !in_array($eventType, ['navigation', 'pageload'])) {
+            return "{$indent}// Skipped {$eventType} - no selector\n";
+        }
+        
+        $cmd = '';
+        
+        switch ($eventType) {
+            case 'click':
+                $text = substr($eventData['innerText'] ?? $eventData['text'] ?? '', 0, 25);
+                $comment = $text ? " // {$text}" : '';
+                $cmd = "{$indent}cy.get('{$selector}').click({ force: true });{$comment}\n";
+                break;
+                
+            case 'input':
+                $value = $event->value ?? $eventData['value'] ?? '';
+                if ($value !== '') {
+                    $escaped = addslashes($value);
+                    $field = $this->getFieldName($eventData);
+                    $comment = $field ? " // {$field}" : '';
+                    $cmd = "{$indent}cy.get('{$selector}').clear().type('{$escaped}');{$comment}\n";
+                }
+                break;
+                
+            case 'select':
+            case 'change':
+                $val = $eventData['selectedText'] ?? $eventData['selectedValue'] ?? '';
+                if ($val) {
+                    $cmd = "{$indent}cy.get('{$selector}').select('" . addslashes($val) . "');\n";
+                }
+                break;
+                
+            case 'checkbox':
+            case 'radio':
+                $action = ($eventData['checked'] ?? false) ? 'check' : 'uncheck';
+                $cmd = "{$indent}cy.get('{$selector}').{$action}({ force: true });\n";
+                break;
+                
+            case 'submit':
+            case 'form_submit':
+                $cmd = "{$indent}cy.get('{$selector}').submit();\n";
+                break;
+                
+            case 'navigation':
+            case 'pageload':
+                // Skip these in cross-origin blocks
+                break;
+                
+            default:
+                $cmd = "{$indent}// {$eventType} event\n";
+        }
+        
+        return $cmd;
+    }
+
+    /**
+     * Get simple selector for cross-origin (avoid complex selectors)
+     */
+    private function getBestSelectorSimple($eventData)
+    {
+        $selectors = $eventData['selectors'] ?? [];
+        
+        // Priority: id > name > testId > type > placeholder > cypressSelector
+        if (!empty($selectors['id'])) {
+            return '[id="' . addslashes($selectors['id']) . '"]';
+        }
+        if (!empty($selectors['name'])) {
+            return '[name="' . addslashes($selectors['name']) . '"]';
+        }
+        if (!empty($selectors['testId'])) {
+            return '[data-testid="' . addslashes($selectors['testId']) . '"]';
+        }
+        if (!empty($selectors['type']) && !empty($eventData['tagName'])) {
+            $tag = strtolower($eventData['tagName']);
+            return "{$tag}[type=\"" . addslashes($selectors['type']) . "\"]";
+        }
+        if (!empty($selectors['placeholder'])) {
+            return '[placeholder="' . addslashes($selectors['placeholder']) . '"]';
+        }
+        if (!empty($eventData['cypressSelector'])) {
+            $cs = $eventData['cypressSelector'];
+            // Skip xpath selectors in cross-origin
+            if (strpos($cs, '/') !== 0 && strpos($cs, 'xpath') !== 0) {
+                return $cs;
+            }
+        }
+        if (!empty($eventData['tagName'])) {
+            return strtolower($eventData['tagName']);
+        }
+        
+        return null;
     }
 
     /**
@@ -839,6 +1084,137 @@ class TestCaseController extends Controller
                $selectors['placeholder'] ??
                $selectors['ariaLabel'] ??
                null;
+    }
+
+    /**
+     * Generate cy.origin() block for cross-origin events (OAuth/SSO flows)
+     */
+    private function generateCrossOriginBlockCode($domain, $eventsWithData)
+    {
+        $code = "\n    // ═══════════════════════════════════════════════════════════════\n";
+        $code .= "    // CROSS-ORIGIN: {$domain} (OAuth/SSO Authentication)\n";
+        $code .= "    // ═══════════════════════════════════════════════════════════════\n";
+        $code .= "    cy.origin('https://{$domain}', () => {\n";
+        $code .= "      // Suppress uncaught exceptions from third-party authentication pages\n";
+        $code .= "      // Common errors: 'baseUrl already declared', 'ResizeObserver loop', etc.\n";
+        $code .= "      cy.on('uncaught:exception', (err) => {\n";
+        $code .= "        console.log('Cross-origin exception suppressed:', err.message);\n";
+        $code .= "        return false; // Prevent test failure\n";
+        $code .= "      });\n\n";
+
+        foreach ($eventsWithData as $item) {
+            $event = $item['event'];
+            $eventData = $item['eventData'];
+            $eventType = strtolower($event->event_type);
+
+            $selector = $this->getBestSelectorForCrossOrigin($eventData);
+
+            if (!$selector) {
+                $code .= "      // Unable to generate selector for {$eventType} event\n";
+                continue;
+            }
+
+            // Generate command based on event type
+            switch ($eventType) {
+                case 'click':
+                    $text = $eventData['innerText'] ?? $eventData['text'] ?? '';
+                    $comment = $text ? " // Click: " . substr($text, 0, 30) : '';
+                    $code .= "      cy.get('{$selector}').click({ force: true });{$comment}\n";
+                    $code .= "      cy.wait(1000);\n";
+                    break;
+
+                case 'input':
+                    $value = $event->value ?? $eventData['value'] ?? '';
+                    if ($value) {
+                        $escapedValue = addslashes($value);
+                        $fieldName = $this->getFieldName($eventData);
+                        $comment = $fieldName ? " // Input: {$fieldName}" : '';
+                        $code .= "      cy.get('{$selector}').clear().type('{$escapedValue}');{$comment}\n";
+                        $code .= "      cy.wait(500);\n";
+                    }
+                    break;
+
+                case 'change':
+                case 'select':
+                    if (isset($eventData['selectedText']) || isset($eventData['selectedValue'])) {
+                        $selectValue = $eventData['selectedText'] ?? $eventData['selectedValue'] ?? '';
+                        $escapedValue = addslashes($selectValue);
+                        $code .= "      cy.get('{$selector}').select('{$escapedValue}');\n";
+                        $code .= "      cy.wait(500);\n";
+                    }
+                    break;
+
+                case 'checkbox':
+                case 'radio':
+                    if (isset($eventData['checked'])) {
+                        $action = $eventData['checked'] ? 'check' : 'uncheck';
+                        $code .= "      cy.get('{$selector}').{$action}({ force: true });\n";
+                        $code .= "      cy.wait(500);\n";
+                    }
+                    break;
+
+                case 'submit':
+                case 'form_submit':
+                    $code .= "      cy.get('{$selector}').submit();\n";
+                    $code .= "      cy.wait(2000);\n";
+                    break;
+
+                default:
+                    $code .= "      // {$eventType}: {$selector}\n";
+            }
+        }
+
+        $code .= "    });\n";
+        $code .= "    // Wait for redirect back to main application\n";
+        $code .= "    cy.wait(3000);\n\n";
+
+        return $code;
+    }
+
+    /**
+     * Get best selector for cross-origin context (simpler selectors work better)
+     */
+    private function getBestSelectorForCrossOrigin($eventData)
+    {
+        $selectors = $eventData['selectors'] ?? [];
+
+        // For cross-origin, prefer simple attribute selectors
+        if (!empty($selectors['id'])) {
+            return '[id=\"' . addslashes($selectors['id']) . '\"]';
+        }
+
+        if (!empty($selectors['name'])) {
+            return '[name=\"' . addslashes($selectors['name']) . '\"]';
+        }
+
+        if (!empty($selectors['testId'])) {
+            return '[data-testid=\"' . addslashes($selectors['testId']) . '\"]';
+        }
+
+        if (!empty($selectors['type']) && !empty($eventData['tagName'])) {
+            $tagName = strtolower($eventData['tagName']);
+            return "{$tagName}[type=\"" . addslashes($selectors['type']) . "\"]";
+        }
+
+        if (!empty($selectors['placeholder'])) {
+            return '[placeholder=\"' . addslashes($selectors['placeholder']) . '\"]';
+        }
+
+        // Fall back to cypressSelector
+        if (!empty($eventData['cypressSelector'])) {
+            $cypressSelector = $eventData['cypressSelector'];
+            // Skip xpath in cross-origin (not well supported)
+            if (strpos($cypressSelector, '/') !== 0) {
+                return addslashes($cypressSelector);
+            }
+        }
+
+        // Last resort - tag name
+        if (!empty($eventData['tagName'])) {
+            return strtolower($eventData['tagName']);
+        }
+
+        return null;
     }
 
     /**

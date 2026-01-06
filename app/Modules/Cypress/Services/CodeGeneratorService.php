@@ -21,7 +21,14 @@ class CodeGeneratorService
     protected function generateCrossOriginBlock(string $domain, array $events): string
     {
         $code = "    // Handle cross-origin authentication on {$domain}\n";
-        $code .= "    cy.origin('{$domain}', () => {\n";
+        $code .= "    cy.origin('https://{$domain}', () => {\n";
+        $code .= "      // Suppress uncaught exceptions from third-party OAuth pages\n";
+        $code .= "      // Common errors: 'baseUrl already declared', 'ResizeObserver loop', etc.\n";
+        $code .= "      cy.on('uncaught:exception', (err) => {\n";
+        $code .= "        // Return false to prevent Cypress from failing the test\n";
+        $code .= "        console.log('Cross-origin exception suppressed:', err.message);\n";
+        $code .= "        return false;\n";
+        $code .= "      });\n\n";
         
         foreach ($events as $event) {
             $eventType = $event['type'] ?? 'unknown';
@@ -158,6 +165,7 @@ class CodeGeneratorService
         
         // Detect if cross-origin navigation is needed
         $hasCrossOrigin = count($domains) > 1;
+        $mainDomain = $domains[0] ?? null;
         $crossOriginDomain = null;
         if ($hasCrossOrigin && count($domains) >= 2) {
             // Assume second domain is the auth domain (id.oss.net.bd)
@@ -192,7 +200,43 @@ class CodeGeneratorService
                           $path;
         }
 
+        // Get cross-origin domains (non-main domains)
+        $crossOriginDomains = array_filter($domains, fn($d) => $d !== $mainDomain);
+
         $code = "describe('Recorded Test', () => {\n";
+        
+        // Add global uncaught exception handler
+        $code .= "  // Global handler to suppress third-party script errors\n";
+        $code .= "  Cypress.on('uncaught:exception', (err, runnable) => {\n";
+        $code .= "    const ignoredErrors = [\n";
+        $code .= "      'baseUrl', 'has already been declared', 'ResizeObserver loop',\n";
+        $code .= "      'Script error', 'NetworkError', 'Load failed', 'cancelled', 'ChunkLoadError'\n";
+        $code .= "    ];\n";
+        $code .= "    if (ignoredErrors.some(msg => err.message.includes(msg))) {\n";
+        $code .= "      console.log('Suppressed error:', err.message);\n";
+        $code .= "      return false;\n";
+        $code .= "    }\n";
+        $code .= "    return true;\n";
+        $code .= "  });\n\n";
+
+        // Pre-configure cross-origin error handlers BEFORE any navigation
+        if (!empty($crossOriginDomains)) {
+            $code .= "  // ═══════════════════════════════════════════════════════════════\n";
+            $code .= "  // PRE-CONFIGURE CROSS-ORIGIN ERROR HANDLERS\n";
+            $code .= "  // Must be set up BEFORE navigation to these OAuth/SSO domains\n";
+            $code .= "  // ═══════════════════════════════════════════════════════════════\n";
+            foreach ($crossOriginDomains as $crossDomain) {
+                $code .= "  before(() => {\n";
+                $code .= "    cy.origin('https://{$crossDomain}', () => {\n";
+                $code .= "      Cypress.on('uncaught:exception', (err) => {\n";
+                $code .= "        console.log('Suppressed cross-origin error:', err.message);\n";
+                $code .= "        return false;\n";
+                $code .= "      });\n";
+                $code .= "    });\n";
+                $code .= "  });\n\n";
+            }
+        }
+
         $code .= "  it('should perform recorded actions', () => {\n";
         
         // Add initial visit only if we have a URL

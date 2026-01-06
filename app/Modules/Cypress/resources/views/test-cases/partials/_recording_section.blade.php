@@ -138,6 +138,7 @@ let recordingInterval = null;
 let recordingStartTime = null;
 let wsConnection = null;
 let capturedEvents = [];
+let eventPollInterval = null; // Track polling interval to clear on stop
 
 // Check service health on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -354,6 +355,12 @@ function connectWebSocket(wsUrl) {
 function startEventPolling() {
     if (!recordingSessionId) return;
     
+    // Clear any existing poll interval first
+    if (eventPollInterval) {
+        clearInterval(eventPollInterval);
+        eventPollInterval = null;
+    }
+    
     // Extract path from URL
     const urlPath = window.location.pathname;
     const urlMatch = urlPath.match(/\/projects\/([^\/]+)\/modules\/([^\/]+)\/test-cases\/([^\/]+)/);
@@ -363,9 +370,10 @@ function startEventPolling() {
     
     console.log('[Event Polling] Starting polling for session:', recordingSessionId);
     
-    const pollInterval = setInterval(async () => {
+    eventPollInterval = setInterval(async () => {
         if (!recordingSessionId) {
-            clearInterval(pollInterval);
+            clearInterval(eventPollInterval);
+            eventPollInterval = null;
             return;
         }
         
@@ -392,7 +400,8 @@ function startEventPolling() {
     }, 2000);
 }
 
-function addEventToFeed(event) {
+// Render a single event to the live feed UI (no array modification)
+function renderEventToFeed(event, prepend = true) {
     const feed = document.getElementById('live-events-feed');
     const eventEl = document.createElement('div');
     eventEl.className = 'text-white text-sm py-1 border-l-2 border-green-400 pl-3 mb-1 animate-fade-in';
@@ -413,23 +422,45 @@ function addEventToFeed(event) {
         <span class="text-white/70">${event.selector || event.url || ''}</span>
     `;
     
-    feed.prepend(eventEl);
+    if (prepend) {
+        feed.prepend(eventEl);
+    } else {
+        feed.appendChild(eventEl);
+    }
     
-    // Keep only last 20 events
+    // Keep only last 20 events in the UI
     while (feed.children.length > 20) {
         feed.removeChild(feed.lastChild);
+    }
+}
+
+// Called from WebSocket - adds to array AND renders
+function addEventToFeed(event) {
+    // Only add if recording is still active
+    if (!recordingSessionId) {
+        console.log('[addEventToFeed] Skipped - recording stopped');
+        return;
     }
     
     capturedEvents.push(event);
     document.getElementById('events-count').textContent = capturedEvents.length;
+    renderEventToFeed(event, true);
 }
 
+// Called from polling - replaces array and re-renders (NO double-add!)
 function updateEventFeed(events) {
+    // Only update if recording is still active
+    if (!recordingSessionId) {
+        console.log('[updateEventFeed] Skipped - recording stopped');
+        return;
+    }
+    
     const feed = document.getElementById('live-events-feed');
     feed.innerHTML = '';
     
+    // Just render the last 20 events - don't add to array (polling already set capturedEvents)
     events.slice(-20).reverse().forEach(event => {
-        addEventToFeed(event);
+        renderEventToFeed(event, false);
     });
 }
 
@@ -488,13 +519,27 @@ async function stopRecording() {
             document.getElementById('recording-url').disabled = false;
             document.getElementById('recording-status').style.display = 'none';
             
-            // Clear timers
+            // Clear ALL timers - this is critical to prevent duplicate events!
             clearInterval(recordingInterval);
+            recordingInterval = null;
+            
+            // Stop event polling immediately
+            if (eventPollInterval) {
+                clearInterval(eventPollInterval);
+                eventPollInterval = null;
+                console.log('[Stop Recording] Event polling stopped');
+            }
             
             // Close WebSocket
             if (wsConnection) {
                 wsConnection.close();
+                wsConnection = null;
             }
+            
+            // Reset session ID to prevent any more event captures
+            const stoppedSessionId = recordingSessionId;
+            recordingSessionId = null;
+            console.log('[Stop Recording] Session stopped:', stoppedSessionId);
             
             showNotification('Recording stopped! Review your captured events.', 'success');
             
@@ -527,18 +572,33 @@ async function handleBrowserClosedAutomatically() {
     document.getElementById('recording-url').disabled = false;
     document.getElementById('recording-status').style.display = 'none';
     
-    // Clear timers
+    // Clear ALL timers - critical to prevent duplicate events!
     if (recordingInterval) {
         clearInterval(recordingInterval);
         recordingInterval = null;
+    }
+    
+    // Stop event polling immediately
+    if (eventPollInterval) {
+        clearInterval(eventPollInterval);
+        eventPollInterval = null;
+        console.log('[handleBrowserClosedAutomatically] Event polling stopped');
+    }
+    
+    // Close WebSocket
+    if (wsConnection) {
+        wsConnection.close();
+        wsConnection = null;
     }
     
     // Show captured events section (NO auto-generate code)
     showCapturedEventsSection();
     showNotification('Browser closed. Review your captured events.', 'info');
     
-    // Keep session ID for events reference
-    // recordingSessionId = null; // Don't reset yet
+    // Reset session ID to prevent any more event captures
+    const stoppedSessionId = recordingSessionId;
+    recordingSessionId = null;
+    console.log('[handleBrowserClosedAutomatically] Session stopped:', stoppedSessionId);
     recordingStartTime = null;
 }
 
