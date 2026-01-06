@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('ai_usage_logs', function (Blueprint $table) {
+            // Change prompt column from text to longText to accommodate large prompts
+            // This is necessary for code generation features where prompts can include
+            // large JSON data structures with recorded events
+            $table->longText('prompt')->nullable()->change();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('ai_usage_logs', function (Blueprint $table) {
+            // Revert back to text type
+            $table->text('prompt')->nullable()->change();
+        });
+    }
+};

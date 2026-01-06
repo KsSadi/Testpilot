@@ -796,7 +796,7 @@ class RecordingController extends Controller
 
             // Call AI Service - use higher max tokens for complete code generation
             $aiResponse = AI::withTemperature(0.3)
-                ->withMaxTokens(8000)
+                ->withMaxTokens(16000)
                 ->generateCode($prompt, 'javascript', [
                     'system_prompt' => $this->getAISystemPrompt()
                 ]);
@@ -870,9 +870,9 @@ class RecordingController extends Controller
         $eventsJson = json_encode($events, JSON_PRETTY_PRINT);
         
         return <<<PROMPT
-Generate a professional, production-ready Cypress E2E test based on these recorded user interactions:
+Generate a professional, production-ready Cypress E2E test based on these recorded user interactions.
 
-**Test Case Name:** {$testCase->name}
+**Test Case:** {$testCase->name}
 **Description:** {$testCase->description}
 
 **Recorded Events:**
@@ -880,27 +880,36 @@ Generate a professional, production-ready Cypress E2E test based on these record
 {$eventsJson}
 ```
 
-**Requirements:**
-1. Generate clean, readable Cypress test code
-2. Use best practices and modern Cypress patterns
-3. Include proper waits and assertions
-4. Handle potential flakiness with proper selectors
-5. Add meaningful comments
-6. Use data-testid or aria-labels when available
-7. Include proper error handling
-8. Make tests resilient and maintainable
-9. Follow Cypress best practices for E2E testing
-10. Use cy.intercept() for API calls if detected
+**CRITICAL REQUIREMENTS - CODE MUST BE COMPLETE:**
+1. Generate COMPLETE code with ALL closing brackets - no truncation allowed
+2. Every opening { MUST have a matching closing }
+3. Every opening ( MUST have a matching closing )
+4. Every describe() block MUST end with });
+5. Every it() block MUST end with });
+6. Include ALL steps from the recorded events
+7. If the test has 50+ steps, still complete ALL of them
 
-**CRITICAL - CODE COMPLETENESS:**
-- You MUST generate COMPLETE code with ALL closing brackets
-- Every { MUST have a matching }
-- Every ( MUST have a matching )
-- Every describe() and it() block MUST be properly closed with });
-- NEVER leave code truncated or incomplete
-- If the test is long, still complete it fully
+**Code Quality Requirements:**
+1. Use constants for credentials and test data at the top
+2. Use clear, descriptive step logging with cy.log()
+3. Add visibility checks before interactions: .should('be.visible')
+4. Handle cross-origin authentication with cy.origin()
+5. Use proper selectors: ID > data-testid > aria-label > CSS
+6. Include beforeEach() hook for setup
+7. Handle modals and dynamic elements with conditional checks
+8. Use strategic waits (cy.wait()) only when necessary
+9. Add meaningful comments explaining complex steps
+10. Follow Cypress best practices
+11. **ALWAYS add .first() after selectors that might match multiple elements**
+12. **ALWAYS use .first() when using :contains() or text selectors**
+13. **ALWAYS use .first() when using class-based selectors**
+14. **For elements that may have hidden duplicates (mobile/desktop), use .filter(':visible').first() instead of .should('be.visible')**
 
-Generate ONLY the Cypress test code, no explanations.
+**Output Format:**
+Return ONLY the complete JavaScript code. Start with describe() and end with the closing });
+Do NOT include markdown code fences (```).
+Do NOT add explanations before or after the code.
+Just pure, complete, executable Cypress test code.
 PROMPT;
     }
 
@@ -910,32 +919,73 @@ PROMPT;
     protected function getAISystemPrompt(): string
     {
         return <<<SYSTEM
-You are an expert Cypress test automation engineer with 10+ years of experience. You write:
+You are an expert Cypress E2E test automation engineer. Your #1 priority is generating COMPLETE, FULLY-FUNCTIONAL test code.
 
-1. **Clean, Production-Ready Code** - No placeholder or example code
-2. **Industry Best Practices** - Following Cypress official guidelines
-3. **Resilient Tests** - Using proper waits, retries, and selectors
-4. **Well-Documented** - With clear comments explaining the test flow
-5. **Bug-Free** - Code that runs without errors
-6. **COMPLETE Code** - Always finish all code blocks with proper closing brackets
+=== CRITICAL RULES (MUST FOLLOW) ===
+1. **CODE COMPLETENESS IS MANDATORY**
+   - Every describe() block MUST end with });
+   - Every it() block MUST end with });
+   - Every { MUST have a matching }
+   - Every ( MUST have a matching )
+   - NEVER truncate code - complete ALL steps
+   - Even if test has 100+ steps, write them ALL
 
-Key patterns you follow:
-- Use cy.get() with robust selectors (data-testid > aria-label > css)
-- Avoid cy.wait() with arbitrary times when possible
-- Use cy.intercept() for network requests
-- Include before/beforeEach hooks for setup
-- Add proper assertions for each action
-- Handle dynamic content gracefully
-- Use Cypress commands efficiently
+2. **Code Structure**
+   - Start with: describe('Test Name', () => {
+   - Define constants at top (URLs, credentials, test data)
+   - Include beforeEach() for common setup
+   - Create one comprehensive it() block
+   - End with: });
 
-CRITICAL RULES:
-- ALWAYS complete all code blocks - never leave code truncated
-- ALWAYS close all brackets: every { must have a matching }
-- ALWAYS close all parentheses: every ( must have a matching )
-- ALWAYS end describe() and it() blocks properly
-- If code is getting long, still finish it completely
+3. **Best Practices**
+   - Add cy.log('Step X: description') for each major step
+   - Use .should('be.visible') before clicking/typing ONLY for unique elements
+   - **For elements with potential hidden duplicates, use .filter(':visible').first() instead of .should('be.visible')**
+   - **ALWAYS add .first() after selectors that might match multiple elements**
+   - **ALWAYS use .first() with :contains() selectors (e.g., cy.get('button:contains("Text")').first())**
+   - **ALWAYS use .first() with class-based selectors that may have duplicates**
+   - Handle cross-origin auth with cy.origin()
+   - Check for optional elements with cy.get('body').then()
+   - Use strategic cy.wait() for page transitions
+   - Prefer IDs and data attributes for selectors
+   - Add comments for complex logic
 
-Output format: Return ONLY the JavaScript/Cypress code, wrapped in a describe() block. No markdown, no explanations before or after the code.
+4. **Output Format**
+   - Return ONLY executable JavaScript code
+   - NO markdown code fences (```)
+   - NO explanations or comments outside the code
+   - NO placeholder text like "... rest of code ..."
+   - Just complete, working Cypress test code
+
+=== EXAMPLE STRUCTURE ===
+describe('Test Name', () => {
+  const CONSTANT = 'value';
+  
+  beforeEach(() => {
+    cy.visit(URL);
+  });
+  
+  it('should complete the flow', () => {
+    cy.log('Step 1: Click button that may have hidden mobile duplicate');
+    cy.get('button.btn:contains("Click Me")').filter(':visible').first().click();
+    
+    cy.log('Step 2: Fill input with unique ID');
+    cy.get('#unique-id').should('be.visible').type('text');
+    
+    cy.log('Step 3: Select from dropdown with multiple matches');
+    cy.get('a.dropdown-item:contains("Option")').filter(':visible').first().click();
+    // ... ALL steps ...
+  });
+});
+
+IMPORTANT SELECTOR RULES:
+- If selector is an ID (starts with #), use .should('be.visible') - IDs are unique
+- If selector uses :contains(), use .filter(':visible').first() - text may appear multiple times
+- If selector uses class names only, use .filter(':visible').first() - classes may have duplicates
+- If element may have mobile/desktop versions, ALWAYS use .filter(':visible').first()
+- If selector might match multiple elements, ALWAYS add .first() or .filter(':visible').first()
+
+Remember: Code must be 100% complete and ready to run. No truncation allowed.
 SYSTEM;
     }
 
